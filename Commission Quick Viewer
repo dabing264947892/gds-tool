@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commission Quick Viewer v3.2 (B8BL Optimized)</title>
+    <!-- SheetJS CDN -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script>
+        // Fallback check
+        if (typeof XLSX === 'undefined') {
+            console.warn('SheetJS not loaded from CDN. Ensure internet connection or local library.');
+        }
+    </script>
+    <style>
+        /* CSS from style.css */
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-app: #f3f4f6;
+            --bg-sidebar: #111827;
+            --text-sidebar: #e5e7eb;
+            --border: #e5e7eb;
+            --white: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --sidebar-width: 280px;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-app); color: var(--text-main); height: 100vh; overflow: hidden; }
+
+        .app-container { display: flex; height: 100%; width: 100%; position: relative; }
+
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-sidebar); display: flex; flex-direction: column; padding: 1.25rem; flex-shrink: 0; border-right: 1px solid #374151; }
+        .brand { margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; }
+        .brand h2 { margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--white); }
+        .badge { background: var(--success); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+
+        .sidebar-section { margin-bottom: 2rem; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .sidebar h3 { font-size: 0.8rem; text-transform: uppercase; color: #9ca3af; margin: 0; letter-spacing: 0.05em; }
+        .btn-icon { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 1.2rem; padding: 0; }
+        .btn-icon:hover { color: var(--white); }
+
+        .file-input-wrapper { margin-bottom: 1rem; }
+        .pcc-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        .pcc-item { padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; background: #1f2937; cursor: pointer; transition: all 0.2s; position: relative; border-left: 3px solid transparent; }
+        .pcc-item:hover { background: #374151; }
+        .pcc-item.active { background: #374151; border-left-color: var(--primary); }
+        .pcc-info { display: flex; justify-content: space-between; align-items: baseline; }
+        .pcc-name { font-weight: bold; font-size: 1rem; color: var(--white); }
+        .pcc-date { font-size: 0.75rem; color: #9ca3af; }
+        .pcc-stats { font-size: 0.75rem; color: #9ca3af; margin-top: 4px; display: flex; gap: 8px; }
+        .btn-delete-pcc { position: absolute; right: 8px; top: 8px; background: none; border: none; color: #6b7280; cursor: pointer; font-size: 1.1rem; padding: 0 4px; display: none; }
+        .pcc-item:hover .btn-delete-pcc { display: block; color: var(--danger); }
+
+        .sidebar-section.bottom { flex: 0; margin-bottom: 0; border-top: 1px solid #374151; padding-top: 1.5rem; }
+        .app-version { font-size: 0.7rem; color: #4b5563; text-align: center; margin-top: 1rem; }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: #f9fafb; }
+
+        /* Search Header */
+        .search-header { background: var(--white); padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10; }
+        .search-row { display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 0.75rem; }
+        .search-row.secondary { margin-bottom: 0; align-items: center; justify-content: space-between; }
+
+        .flex-1 { flex: 1; }
+        .flex-2 { flex: 2; }
+
+        .input-group label { display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-sub); text-transform: uppercase; }
+        .input-group input { width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; transition: border 0.2s; }
+        .input-group input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
+        .hint { font-weight: normal; color: #9ca3af; text-transform: none; }
+
+        .advanced-details { flex: 1; }
+        .advanced-details summary { cursor: pointer; font-size: 0.85rem; color: var(--primary); font-weight: 500; user-select: none; }
+        .advanced-filters { display: flex; gap: 1rem; margin-top: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; }
+        .advanced-filters input { flex: 1; padding: 0.4rem; font-size: 0.85rem; }
+
+        .toggle-group { display: flex; align-items: center; gap: 1.5rem; }
+        .switch-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; user-select: none; }
+        .btn-text { background: none; border: none; color: var(--text-sub); text-decoration: underline; cursor: pointer; font-size: 0.85rem; }
+
+        /* Buttons */
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3); }
+        .btn-block { width: 100%; }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+        .btn-outline { background: transparent; border: 1px solid #4b5563; color: var(--text-sidebar); }
+        .btn-outline:hover { border-color: var(--white); color: var(--white); }
+        .btn-lg { height: 42px; padding: 0 1.5rem; }
+
+        /* Results */
+        .results-info { padding: 0.5rem 1.5rem; background: #eefff6; color: #065f46; font-size: 0.85rem; border-bottom: 1px solid #d1fae5; }
+        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; align-content: start; }
+
+        .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border-radius: 8px 8px 0 0; }
+        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.2; }
+        .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: normal; margin-left: 6px; }
+        .card-dates { font-size: 0.75rem; color: var(--text-sub); text-align: right; background: #f9fafb; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
+
+        .card-body { padding: 1rem; flex: 1; font-size: 0.9rem; }
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: baseline; }
+        .data-label { color: var(--text-sub); font-size: 0.8rem; flex: 1; }
+        .data-value { font-weight: 500; text-align: right; flex: 2; word-break: break-word; }
+        .value-highlight { color: var(--primary); font-weight: 600; }
+        .value-exclude { color: var(--danger); font-size: 0.8rem; display: block; text-align: right; margin-top: 2px; }
+
+        .commission-box { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .comm-label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); text-transform: uppercase; }
+        .comm-value { font-size: 1.4rem; font-weight: 800; color: var(--success); }
+
+        .card-footer { padding: 0.75rem 1rem; background: #f9fafb; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; display: flex; gap: 0.75rem; }
+        .card-footer .btn { flex: 1; }
+
+        /* Slide Panel */
+        .slide-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 800px; background: var(--white); box-shadow: -10px 0 25px rgba(0,0,0,0.15); transform: translateX(0); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 100; display: flex; flex-direction: column; }
+        .slide-panel.wide { width: 900px; }
+        .slide-panel.hidden { transform: translateX(100%); }
+        .panel-header { padding: 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f9fafb; }
+        .panel-header h2 { margin: 0; font-size: 1.25rem; }
+        .btn-close { background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--text-sub); line-height: 1; }
+        .panel-content { padding: 1.5rem; overflow-y: auto; flex: 1; }
+
+        /* Detail Tables - Optimized */
+        .detail-section { margin-bottom: 2rem; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+        .section-title { background: #f3f4f6; padding: 0.75rem 1rem; margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); display:flex; justify-content: space-between; align-items: center; }
+        .info-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .info-table th { background: #f9fafb; text-align: left; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-sub); white-space: nowrap; }
+        .info-table td { padding: 0.6rem 1rem; border-bottom: 1px solid #e5e7eb; color: var(--text-main); vertical-align: top; }
+        .info-table tr:last-child td { border-bottom: none; }
+        .info-table tr:nth-child(even) { background-color: #fcfcfc; }
+        
+        .note-block { padding: 1rem; background: #fff; font-family: monospace; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; color: #374151; max-height: 400px; overflow-y: auto; }
+
+        .notes-section { background: #fffbeb; border: 1px solid #fcd34d; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
+        .notes-section h4 { margin: 0 0 0.75rem 0; color: #92400e; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+        .dual-input { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .notes-section textarea { width: 100%; height: 80px; border: 1px solid #fcd34d; border-radius: 4px; padding: 0.5rem; font-family: monospace; font-size: 0.85rem; resize: vertical; }
+        .notes-actions { display: flex; justify-content: flex-end; margin-top: 0.5rem; align-items: center; gap: 1rem; }
+        .status-text { font-size: 0.8rem; color: var(--success); }
+
+        /* Canvas */
+        .canvas-wrapper { border: 1px solid #e5e7eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1.5rem; padding: 1rem; background: #555; display: flex; justify-content: center; }
+        #previewCanvas { max-width: 100%; background: white; }
+        .text-summary-wrapper { width: 100%; margin-top: 1rem; }
+        .text-summary { font-family: monospace; white-space: pre-wrap; background: #f9fafb; padding: 1rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; line-height: 1.5; color: #374151; }
+
+        /* Empty State */
+        .empty-state { text-align: center; margin-top: 4rem; color: var(--text-sub); }
+        .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
+
+        /* Overlay */
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 50; backdrop-filter: blur(2px); }
+
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 200; display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 2rem; border-radius: 8px; max-width: 700px; width: 90%; max-height: 85vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; }
+        .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .tc-item { background: #f3f4f6; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem; }
+        .tc-code { font-weight: bold; color: var(--primary); }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="app" class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h2>Commission v3.2</h2>
+                <span class="badge">Offline</span>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <h3>Datasets (PCC)</h3>
+                    <button id="btnRefreshDB" class="btn-icon" title="Refresh List">↻</button>
+                </div>
+                <div class="file-input-wrapper">
+                    <label for="uploadExcel" class="btn btn-primary btn-block">
+                        <span class="icon">+</span> Upload Excel / 上传
+                    </label>
+                    <input type="file" id="uploadExcel" accept=".xlsx, .xls" hidden>
+                </div>
+                <ul id="pccList" class="pcc-list">
+                    <li class="loading-text" style="color:#aaa; text-align:center;">Initializing...</li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section bottom">
+                <h3>Data Management</h3>
+                <div class="btn-group" style="display:flex; gap:0.5rem;">
+                    <button id="btnExportData" class="btn btn-sm btn-outline" style="flex:1;">Export</button>
+                    <button id="btnImportData" class="btn btn-sm btn-outline" style="flex:1;">Import</button>
+                </div>
+                <div class="app-version">v3.2.0 B8BL Optimized</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Search Header -->
+            <header class="search-header">
+                <div class="search-row primary">
+                    <div class="input-group flex-2">
+                        <label>Airline (Code/Name) / 航司</label>
+                        <input type="text" id="inpAirline" placeholder="e.g. AC, UA or Air Canada">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Origin / 始发 <span class="hint">(City, Country, TC)</span></label>
+                        <input type="text" id="inpOrigin" placeholder="e.g. YYZ, CA, TC1">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Destination / 目的地</label>
+                        <input type="text" id="inpDest" placeholder="e.g. LHR, GB">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Ticketing Date / 出票日</label>
+                        <input type="date" id="inpDate">
+                    </div>
+                    <div class="input-group action">
+                        <button id="btnSearch" class="btn btn-primary btn-lg">Search / 查询</button>
+                    </div>
+                </div>
+                
+                <div class="search-row secondary">
+                    <details class="advanced-details">
+                        <summary>Advanced Filters / 高级筛选 (Cabin, Tour Code...)</summary>
+                        <div class="advanced-filters">
+                            <input type="text" id="inpCabin" placeholder="Cabin (e.g. Business)">
+                            <input type="text" id="inpRBD" placeholder="RBD (e.g. J, C)">
+                            <input type="text" id="inpTourCode" placeholder="Tour Code">
+                            <input type="text" id="inpFareClass" placeholder="Fare Class">
+                        </div>
+                    </details>
+                    <div class="toggle-group">
+                        <label class="switch-label">
+                            <input type="checkbox" id="chkCurrentPCC" checked> 
+                            <span>Current PCC Only</span>
+                        </label>
+                        <button id="btnShowTC" class="btn-text">TC Definitions</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Results Area -->
+            <div id="resultsHeader" class="results-info hidden">
+                Found <span id="resCount">0</span> rules.
+            </div>
+            <div id="resultsArea" class="results-grid">
+                <div class="empty-state">
+                    <div class="empty-icon">📂</div>
+                    <h3>Ready to Search</h3>
+                    <p>Select a PCC from the sidebar or upload a new Excel file to begin.</p>
+                    <p>请选择左侧 PCC 数据集或上传新文件开始查询。</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Slide Panel: Airline Details -->
+        <div id="detailPanel" class="slide-panel hidden">
+            <div class="panel-header">
+                <h2 id="panelTitle">Airline Details</h2>
+                <button class="btn-close" onclick="closePanel('detailPanel')">&times;</button>
+            </div>
+            <div class="panel-content">
+                <div class="notes-section">
+                    <h4><span class="icon">✎</span> Agency Notes / 航司特别说明</h4>
+                    <div class="dual-input">
+                        <textarea id="noteEn" placeholder="Operator Notes (EN) - e.g. Valid on 014 stock only"></textarea>
+                        <textarea id="noteCn" placeholder="操作备注 (中文) - 例如：仅限014票证，需手动计算"></textarea>
+                    </div>
+                    <div class="notes-actions">
+                        <span id="noteSaveStatus" class="status-text"></span>
+                        <button id="btnSaveNotes" class="btn btn-sm btn-primary">Save Notes / 保存</button>
+                    </div>
+                </div>
+                <div id="panelBody" class="detail-body">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide Panel: Canvas -->
+        <div id="canvasPanel" class="slide-panel hidden wide">
+            <div class="panel-header">
+                <h2>Commission Checklist / 核对单</h2>
+                <button class="btn-close" onclick="closePanel('canvasPanel')">&times;</button>
+            </div>
+            <div class="panel-content center-content">
+                <div class="canvas-wrapper">
+                    <canvas id="previewCanvas"></canvas>
+                </div>
+                <div class="action-bar" style="text-align:center;">
+                    <button id="btnDownloadCanvas" class="btn btn-primary">Download Image</button>
+                </div>
+                <div class="text-summary-wrapper">
+                    <h4>Text Summary (Copyable)</h4>
+                    <div id="textSummary" class="text-summary" contenteditable="true"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal: TC Definitions -->
+        <div id="tcModal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeModal('tcModal')">&times;</span>
+                <h3>IATA TC Definitions / 区域说明</h3>
+                <div id="tcContent" class="tc-grid">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Overlay -->
+        <div id="overlay" class="overlay hidden" onclick="closeAllPanels()"></div>
+    </div>
+
+    <!-- MAIN LOGIC -->
+    <script type="module">
+        /*******************************************************
+         * 1. DATA & CONSTANTS
+         *******************************************************/
+        const TC_MAP = {
+            "YYZ": { "country": "CA", "area": "TC1", "state": "ON" },
+            "YVR": { "country": "CA", "area": "TC1", "state": "BC" },
+            "YUL": { "country": "CA", "area": "TC1", "state": "QC" },
+            "YYC": { "country": "CA", "area": "TC1", "state": "AB" },
+            "JFK": { "country": "US", "area": "TC1", "state": "NY" },
+            "LAX": { "country": "US", "area": "TC1", "state": "CA" },
+            "SFO": { "country": "US", "area": "TC1", "state": "CA" },
+            "ORD": { "country": "US", "area": "TC1", "state": "IL" },
+            "LHR": { "country": "GB", "area": "TC2" },
+            "CDG": { "country": "FR", "area": "TC2" },
+            "FRA": { "country": "DE", "area": "TC2" },
+            "HKG": { "country": "HK", "area": "TC3" },
+            "NRT": { "country": "JP", "area": "TC3" },
+            "HND": { "country": "JP", "area": "TC3" },
+            "PEK": { "country": "CN", "area": "TC3" },
+            "PVG": { "country": "CN", "area": "TC3" },
+            "SYD": { "country": "AU", "area": "TC3" },
+            "MEL": { "country": "AU", "area": "TC3" },
+            "BKK": { "country": "TH", "area": "TC3" },
+            "SIN": { "country": "SG", "area": "TC3" },
+            "DXB": { "country": "AE", "area": "TC2" },
+            "IST": { "country": "TR", "area": "TC2" },
+            "CA": { "area": "TC1" },
+            "US": { "area": "TC1" },
+            "CN": { "area": "TC3" },
+            "JP": { "area": "TC3" },
+            "GB": { "area": "TC2" },
+            "FR": { "area": "TC2" },
+            "DE": { "area": "TC2" },
+            "AU": { "area": "TC3" }
+        };
+
+        // Static mapping for Common Airlines with CN/EN names
+        // Key: IATA Code, Value: Display String
+        const AIRLINE_CN_MAP = {
+            "YP": "AIR PREMIA普莱米娅航空",
+            "UA": "United Airlines美联航",
+            "AC": "Air Canada加拿大航空",
+            "MU": "China Eastern Airlines中国东方航空",
+            "CZ": "China Southern Airlines中国南方航空",
+            "CA": "Air China中国国际航空",
+            "CI": "China Airlines中华航空",
+            "BR": "EVA Airways长荣航空",
+            "CX": "Cathay Pacific国泰航空",
+            "HU": "Hainan Airlines海南航空",
+            "JX": "STARLUX Airlines星宇航空",
+            "PR": "Philippine Airlines菲律宾航空",
+            "NH": "All Nippon Airways全日空",
+            "JL": "Japan Airlines日本航空",
+            "KE": "Korean Air大韩航空",
+            "OZ": "Asiana Airlines韩亚航空",
+            "SQ": "Singapore Airlines新加坡航空",
+            "TG": "Thai Airways泰国国际航空",
+            "VN": "Vietnam Airlines越南航空",
+            "WS": "WestJet西捷航空",
+            "DL": "Delta Air Lines达美航空",
+            "AA": "American Airlines美国航空",
+            "AF": "Air France法国航空",
+            "KL": "KLM荷兰皇家航空",
+            "LH": "Lufthansa汉莎航空",
+            "LX": "SWISS瑞士国际航空",
+            "OS": "Austrian Airlines奥地利航空",
+            "BA": "British Airways英国航空",
+            "VS": "Virgin Atlantic维珍大西洋航空",
+            "FI": "Icelandair冰岛航空",
+            "ET": "Ethiopian Airlines埃塞俄比亚航空",
+            "TK": "Turkish Airlines土耳其航空",
+            "QR": "Qatar Airways卡塔尔航空",
+            "EK": "Emirates阿联酋航空",
+            "EY": "Etihad Airways阿提哈德航空",
+            "MF": "Xiamen Airlines厦门航空",
+            "3U": "Sichuan Airlines四川航空",
+            "2T": "BERMUDAIR/HAHN AIR",
+            "H1": "BERMUDAIR/HAHN AIR",
+            "HR": "BERMUDAIR/HAHN AIR",
+            "2M": "MAYA ISLAND AIR",
+            "4N": "AIR NORTH",
+            "4Z": "AIRLINK PTY",
+            "8M": "MYANMAR AIRWAYS",
+            "9V": "AVIOR AIRLINES",
+            "AD": "AZUL LINHAS AEREAS",
+            "AM": "AEROMEXICO",
+            "AT": "ROYAL AIR MAROC",
+            "AV": "AVIANCA",
+            "AW": "AFRICA WORLD AIRLINES",
+            "AZ": "ITA AIRWAYS",
+            "BF": "FRENCH BEE",
+            "BI": "ROYAL BRUNEI",
+            "BP": "AIR BOTSWANA",
+            "BW": "CARIBBEAN AIRLINES",
+            "CG": "PNG AIR",
+            "CM": "COPA AIRLINES",
+            "DE": "CONDOR",
+            "DM": "ARAJET",
+            "DT": "TAAG ANGOLA AIRLINES",
+            "EI": "AER LINGUS",
+            "FJ": "FIJI AIRWAYS",
+            "G3": "GOL LINHAS AEREAS",
+            "GF": "GULF AIR",
+            "GQ": "SKY EXPRESS",
+            "H2": "SKY AIRLINE",
+            "HC": "AIR SENEGAL",
+            "HM": "AIR SEYCHELLES",
+            "HX": "HONG KONG AIRLINES",
+            "IE": "SOLOMON AIRLINES",
+            "JY": "INTERCARIBBEAN",
+            "KP": "ASKY",
+            "KQ": "KENYA AIRWAYS",
+            "KU": "KUWAIT AIRWAYS",
+            "LA": "LATAM AIRLINES",
+            "LO": "LOT POLISH AIRLINES",
+            "LY": "EL AL ISRAEL AIRLINES",
+            "MH": "MALAYSIA AIRLINES",
+            "MS": "EGYPTAIR",
+            "NO": "NEOS",
+            "NZ": "AIR NEW ZEALAND",
+            "OB": "BOLIVIANA DE AVIACION",
+            "P0": "PROFLIGHT ZAMBIA",
+            "PB": "PAL AIRLINES",
+            "PD": "PORTER AIRLINES",
+            "PW": "PRECISION AIR",
+            "PX": "AIR NIUGINI",
+            "PY": "SURINAM AIRWAYS",
+            "Q4": "EURO AIRLINES",
+            "QF": "QANTAS",
+            "RJ": "ROYAL JORDANIAN",
+            "S4": "SATA AZORES AIRLINES",
+            "S6": "SUNRISE AIRWAYS",
+            "SB": "AIRCALIN",
+            "SK": "SCANDINAVIAN AIRLINES",
+            "SV": "SAUDIA",
+            "TC": "AIR TANZANIA",
+            "TM": "LAM MOZAMBIQUE",
+            "TN": "AIR TAHITI NUI",
+            "TS": "AIR TRANSAT",
+            "UB": "MYANMAR NATIONAL AIRLINES",
+            "UL": "SRILANKAN AIRLINES",
+            "UP": "BAHAMASAIR",
+            "W1": "FLEXFLIGHT",
+            "W2": "FLEXFLIGHT",
+            "WB": "RWANDAIR"
+        };
+
+        /*******************************************************
+         * 2. DATABASE LOGIC (db.js)
+         *******************************************************/
+        const DB_NAME = 'CommissionViewerV3';
+        const DB_VERSION = 1;
+        let db;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains('datasets')) {
+                        db.createObjectStore('datasets', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('notes')) {
+                        db.createObjectStore('notes', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => reject(e);
+            });
+        }
+
+        function savePCC(id, data) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(['datasets'], 'readwrite');
+                const store = tx.objectStore('datasets');
+                const record = {
+                    id: id,
+                    updated: new Date().toISOString(),
+                    recordCount: data.master.length,
+                    contractCount: data.summary.length,
+                    master: data.master,
+                    summary: data.summary,
+                    details: data.details
+                };
+                const req = store.put(record);
+                req.onsuccess = () => resolve();
+                req.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        function getPCCs() {
+            return new Promise((resolve) => {
+                const tx = db.transaction(['datasets'], 'readonly');
+                const store = tx.objectStore('datasets');
+                const request = store.getAll();
+                request.onsuccess = () => {
+                    const list = request.result.map(r => ({
+                        id: r.id,
+                        updated: r.updated,
+                        recordCount: r.recordCount,
+                        contractCount: r.contractCount
+                    }));
+                    list.sort((a, b) => new Date(b.updated) - new Date(a.updated));
+                    resolve(list);
+                };
+            });
+        }
+
+        function getPCCData(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(['datasets'], 'readonly');
+                const store = tx.objectStore('datasets');
+                const request = store.get(id);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function deletePCC(id) {
+            return new Promise((resolve) => {
+                const tx = db.transaction(['datasets'], 'readwrite');
+                tx.objectStore('datasets').delete(id);
+                tx.oncomplete = () => resolve();
+            });
+        }
+
+        function saveOperatorNotes(id, notes) {
+            return new Promise((resolve) => {
+                const tx = db.transaction(['notes'], 'readwrite');
+                tx.objectStore('notes').put({ id, ...notes });
+                tx.oncomplete = () => resolve();
+            });
+        }
+
+        function getOperatorNotes(id) {
+            return new Promise((resolve) => {
+                const tx = db.transaction(['notes'], 'readonly');
+                const req = tx.objectStore('notes').get(id);
+                req.onsuccess = () => resolve(req.result);
+            });
+        }
+
+        async function exportDB() {
+            const datasets = await new Promise(r => {
+                db.transaction('datasets').objectStore('datasets').getAll().onsuccess = e => r(e.target.result);
+            });
+            const notes = await new Promise(r => {
+                db.transaction('notes').objectStore('notes').getAll().onsuccess = e => r(e.target.result);
+            });
+            return JSON.stringify({ datasets, notes });
+        }
+
+        async function importDB(jsonStr) {
+            const data = JSON.parse(jsonStr);
+            const tx = db.transaction(['datasets', 'notes'], 'readwrite');
+            if (data.datasets) {
+                const dsStore = tx.objectStore('datasets');
+                data.datasets.forEach(p => dsStore.put(p));
+            }
+            if (data.notes) {
+                const nStore = tx.objectStore('notes');
+                data.notes.forEach(n => nStore.put(n));
+            }
+            return new Promise(resolve => {
+                tx.oncomplete = () => resolve();
+            });
+        }
+
+        /*******************************************************
+         * 3. PARSER LOGIC (parser.js)
+         *******************************************************/
+        function parseExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                if (typeof XLSX === 'undefined') {
+                    reject(new Error("SheetJS library not loaded. Check internet or local file."));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        const result = {
+                            master: [],
+                            summary: [],
+                            details: {},
+                            pccSuggestion: ''
+                        };
+
+                        const nameMatch = file.name.match(/([A-Z0-9]{4})/);
+                        if (nameMatch) result.pccSuggestion = nameMatch[1];
+
+                        workbook.SheetNames.forEach(sheetName => {
+                            const ws = workbook.Sheets[sheetName];
+                            const snLower = sheetName.toLowerCase();
+
+                            if (snLower.includes('master')) {
+                                // Try Strict First (B7XL style)
+                                let data = findAndParseTable(ws, ['Validating Carrier', 'Airline', 'Origin', 'Commission']);
+                                // Fallback for B8BL (No Validating Carrier col)
+                                if (!data.length) {
+                                    data = findAndParseTable(ws, ['Airline', 'Origin', 'Commission']);
+                                }
+                                result.master = data;
+                            } else if (snLower.includes('summary')) {
+                                result.summary = findAndParseTable(ws, ['Airline Code', 'Contract Name']);
+                            } else if (!snLower.includes('dashboard') && !snLower.includes('list of')) {
+                                try {
+                                    const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+                                    if (raw.length > 5) {
+                                        result.details[sheetName] = raw;
+                                    }
+                                } catch(e) { console.warn("Skipping sheet " + sheetName, e); }
+                            }
+                        });
+
+                        // Fallback: search for Master in all sheets if not named 'master'
+                        if (result.master.length === 0) {
+                            for (const name of workbook.SheetNames) {
+                                const ws = workbook.Sheets[name];
+                                const data = findAndParseTable(ws, ['Airline', 'Origin', 'Commission'], true);
+                                if (data.length > 0) {
+                                    result.master = data;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (result.master.length === 0) {
+                            reject(new Error("Invalid Excel: Could not find 'Master' sheet."));
+                        } else {
+                            resolve(result);
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function findAndParseTable(ws, keywords, strict = false) {
+            if (!ws || !ws['!ref']) return []; 
+
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            const maxScanRow = Math.min(range.e.r, 50);
+            let headerRowIndex = -1;
+
+            for (let R = range.s.r; R <= maxScanRow; ++R) {
+                const rowValues = [];
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cell = ws[XLSX.utils.encode_cell({r: R, c: C})];
+                    if (cell && cell.v) rowValues.push(String(cell.v).trim());
+                }
+                const rowStr = rowValues.join(' ').toLowerCase();
+                // Relaxed matching: check if *some* keywords are present if strict is false
+                // But for table identification we usually want all
+                const match = keywords.every(k => rowStr.includes(k.toLowerCase()));
+                if (match) {
+                    headerRowIndex = R;
+                    break;
+                }
+            }
+
+            if (headerRowIndex === -1) return [];
+
+            const parseRange = { s: { r: headerRowIndex, c: range.s.c }, e: range.e };
+            const rawData = XLSX.utils.sheet_to_json(ws, { range: parseRange, defval: "" });
+            
+            return rawData.map(row => {
+                const cleanRow = {};
+                Object.keys(row).forEach(k => {
+                    const cleanKey = k.trim();
+                    const val = row[k];
+                    cleanRow[cleanKey] = typeof val === 'string' ? val.trim() : val;
+                });
+                return cleanRow;
+            });
+        }
+
+        /*******************************************************
+         * 4. SEARCH & TC LOGIC
+         *******************************************************/
+        function searchRules(masterData, filters, airlineMap) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const results = masterData.filter(row => {
+                        if (filters.airline) {
+                            const q = filters.airline.toUpperCase().trim();
+                            const rowAl = (row['Airline'] || '').toUpperCase();
+                            const rowCode = (row['Validating Carrier'] || '').toUpperCase();
+                            
+                            let match = false;
+                            
+                            // 1. Direct match (Code in Validating Carrier OR Name/Code in Airline col)
+                            if (rowCode && rowCode.includes(q)) match = true;
+                            if (rowAl.includes(q)) match = true;
+                            
+                            // 2. Map Match (Dynamic from Summary)
+                            if (!match && airlineMap && airlineMap[q]) {
+                                const mappedName = airlineMap[q].toUpperCase();
+                                if (rowAl.includes(mappedName) || mappedName.includes(rowAl)) match = true;
+                            }
+
+                            // 3. Static Map Match (Robust Fallback)
+                            if (!match && AIRLINE_CN_MAP[q]) {
+                                const staticName = AIRLINE_CN_MAP[q].toUpperCase();
+                                // Check if row Airline (e.g. "UNITED AIRLINES") is inside "UNITED AIRLINES美联航"
+                                // or if "UNITED AIRLINES美联航" contains row Airline
+                                if (staticName.includes(rowAl) || rowAl.includes(staticName)) match = true;
+                                
+                                // Also split static name by chinese characters to get English part only?
+                                // Simple heuristic: match first part of static name
+                                const engPart = staticName.split(/[\u4e00-\u9fa5]/)[0]; // Split by chinese
+                                if (engPart && rowAl.includes(engPart.trim())) match = true;
+                            }
+                            
+                            if (!match) return false; 
+                        }
+                        if (filters.date) {
+                            const searchDate = new Date(filters.date);
+                            const validFrom = parseExcelDate(row['First Ticketing Date']);
+                            const validTo = parseExcelDate(row['Last Ticketing Date'], true);
+                            if (validFrom && searchDate < validFrom) return false;
+                            if (validTo && searchDate > validTo) return false;
+                        }
+                        if (filters.origin) {
+                            const qOrigin = filters.origin.toUpperCase().trim();
+                            const ruleOrigin = row['Origin'];
+                            const ruleExclude = row['Exclude Origin'];
+                            if (ruleOrigin && !matchLocation(ruleOrigin, qOrigin)) return false;
+                            if (ruleExclude && matchLocation(ruleExclude, qOrigin)) return false;
+                        }
+                        if (filters.dest) {
+                            const qDest = filters.dest.toUpperCase().trim();
+                            const ruleDest = row['Destination'];
+                            const ruleExDest = row['Exclude Destination'];
+                            if (ruleDest && !matchLocation(ruleDest, qDest)) return false;
+                            if (ruleExDest && matchLocation(ruleExDest, qDest)) return false;
+                        }
+                        if (filters.cabin && !checkContains(row['Cabin'], filters.cabin)) return false;
+                        if (filters.rbd && !checkContains(row['RBD'], filters.rbd)) return false;
+                        if (filters.tourCode && !checkContains(row['Tour Code'], filters.tourCode)) return false;
+                        if (filters.fareClass && !checkContains(row['Fare Class'], filters.fareClass)) return false;
+                        return true;
+                    });
+                    resolve(results);
+                }, 0);
+            });
+        }
+
+        function checkContains(fieldVal, searchVal) {
+            if (!fieldVal) return false;
+            return String(fieldVal).toLowerCase().includes(searchVal.toLowerCase());
+        }
+
+        function matchLocation(ruleLocStr, searchLoc) {
+            if (!ruleLocStr || ruleLocStr.toUpperCase() === 'ALL') return true;
+            const rules = ruleLocStr.split(/[,;\s]+/).map(s => s.trim().toUpperCase()).filter(s => s);
+            if (rules.includes(searchLoc)) return true;
+            const mapped = TC_MAP[searchLoc]; 
+            if (mapped) {
+                if (mapped.country && rules.includes(mapped.country)) return true;
+                if (mapped.area && rules.includes(mapped.area)) return true;
+            }
+            return false;
+        }
+
+        function parseExcelDate(val, isEndDate = false) {
+            if (!val) return null;
+            if (typeof val === 'string') {
+                const up = val.toUpperCase();
+                if (up.includes('UFN') || up.includes('PER GDS')) {
+                    return isEndDate ? new Date('2999-12-31') : new Date('1900-01-01');
+                }
+                const d = new Date(val);
+                if (!isNaN(d)) return d;
+            }
+            if (typeof val === 'number') {
+                return new Date(Math.round((val - 25569)*86400*1000));
+            }
+            return null;
+        }
+
+        function getTcDefinitionHtml() {
+            let html = '';
+            const defs = [
+                { code: "TC1", desc: "North/South America (US, CA, MX, BR...)" },
+                { code: "TC2", desc: "Europe, Middle East, Africa (GB, FR, DE, ZA...)" },
+                { code: "TC3", desc: "Asia, Oceania (CN, JP, HK, AU, NZ...)" }
+            ];
+            defs.forEach(d => {
+                html += `<div class="tc-item"><span class="tc-code">${d.code}</span>: ${d.desc}</div>`;
+            });
+            return html;
+        }
+
+        /*******************************************************
+         * 5. CANVAS LOGIC
+         *******************************************************/
+        function renderCanvas(item, canvasId, summaryId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = 800;
+            const height = 600;
+            canvas.width = width;
+            canvas.height = height;
+            
+            const colors = { bg: '#ffffff', header: '#1e3a8a', textHeader: '#ffffff', textLabel: '#6b7280', textValue: '#111827', line: '#e5e7eb', accent: '#f59e0b' };
+
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = colors.header;
+            ctx.fillRect(0, 0, width, 100);
+            ctx.fillStyle = colors.textHeader;
+            ctx.font = 'bold 32px Arial';
+            ctx.fillText('Commission Checklist', 40, 60);
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#93c5fd';
+            ctx.fillText(`PCC: ${item._pcc || 'N/A'} | Date: ${new Date().toLocaleDateString()}`, 40, 85);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fillRect(550, 20, 210, 60);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            const airlineDisplay = item['Validating Carrier'] ? `${item['Validating Carrier']} - ${item.Airline}` : item.Airline;
+            ctx.fillText(airlineDisplay.substring(0, 15), 655, 58);
+            ctx.textAlign = 'left';
+
+            let y = 150;
+            const leftColX = 40;
+            const leftValX = 200;
+            
+            const fields = [
+                { label: 'Airline', value: airlineDisplay },
+                { label: 'Origin', value: item.Origin },
+                { label: 'Destination', value: item.Destination },
+                { label: 'Commission', value: (item['Commission rate Adult %'] || item['Commission rate Adult Amount'] || '0%') + ' (Adult)' },
+                { label: 'Cabin / RBD', value: `${item.Cabin || 'All'} / ${item.RBD || 'All'}` },
+                { label: 'Tour Code', value: item['Tour Code'] || 'N/A' },
+                { label: 'Ticket Desig.', value: item['Ticket Designator'] || 'N/A' },
+                { label: 'Ticketing Date', value: `${item['First Ticketing Date']} to ${item['Last Ticketing Date']}` },
+                { label: 'Fare Class', value: item['Fare Class'] || 'All' }
+            ];
+
+            fields.forEach((field) => {
+                ctx.fillStyle = colors.textLabel;
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText(field.label.toUpperCase(), leftColX, y);
+
+                ctx.fillStyle = colors.textValue;
+                ctx.font = '18px Arial';
+                let val = String(field.value || '-');
+                if (val.length > 55) val = val.substring(0, 52) + '...';
+                ctx.fillText(val, leftValX, y);
+
+                ctx.beginPath();
+                ctx.moveTo(leftColX, y + 15);
+                ctx.lineTo(width - 40, y + 15);
+                ctx.strokeStyle = colors.line;
+                ctx.stroke();
+                y += 45;
+            });
+
+            ctx.fillStyle = '#fef2f2';
+            ctx.fillRect(40, height - 80, width - 80, 50);
+            ctx.strokeStyle = '#fecaca';
+            ctx.strokeRect(40, height - 80, width - 80, 50);
+            ctx.fillStyle = '#b91c1c';
+            ctx.font = 'italic 13px Arial';
+            ctx.fillText("IMPORTANT: Verify details in GDS before ticketing. This document is for reference only.", 60, height - 50);
+
+            const summaryEl = document.getElementById(summaryId);
+            if (summaryEl) {
+                const text = fields.map(f => `${f.label}: ${f.value}`).join('\n');
+                summaryEl.innerText = text;
+            }
+        }
+
+        function downloadCanvas() {
+            const canvas = document.getElementById('previewCanvas');
+            const link = document.createElement('a');
+            link.download = `Checklist-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        /*******************************************************
+         * 6. APP MAIN CONTROLLER
+         *******************************************************/
+        let state = {
+            currentPCC: null,
+            allDatasets: [],
+            masterData: [],
+            summaryData: [],
+            detailsMap: {},
+            airlineCodeMap: {}, // Code -> Name
+            searchFilters: {}
+        };
+
+        const els = {
+            pccList: document.getElementById('pccList'),
+            uploadInput: document.getElementById('uploadExcel'),
+            resultsArea: document.getElementById('resultsArea'),
+            resultsHeader: document.getElementById('resultsHeader'),
+            resCount: document.getElementById('resCount'),
+            chkCurrentPCC: document.getElementById('chkCurrentPCC'),
+            tcModal: document.getElementById('tcModal'),
+            overlay: document.getElementById('overlay')
+        };
+
+        window.closePanel = (id) => {
+            document.getElementById(id).classList.add('hidden');
+            document.getElementById('overlay').classList.add('hidden');
+        };
+        window.closeModal = (id) => {
+            document.getElementById(id).classList.add('hidden');
+        };
+        window.closeAllPanels = () => {
+            document.querySelectorAll('.slide-panel').forEach(el => el.classList.add('hidden'));
+            document.getElementById('overlay').classList.add('hidden');
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await initDB();
+            } catch (e) {
+                console.error(e);
+                alert("IndexedDB error. App may not work offline.");
+            }
+            await refreshSidebar();
+            document.getElementById('inpDate').valueAsDate = new Date();
+            bindEvents();
+        });
+
+        function bindEvents() {
+            els.uploadInput.addEventListener('change', handleUpload);
+            document.getElementById('btnRefreshDB').addEventListener('click', refreshSidebar);
+            document.getElementById('btnExportData').addEventListener('click', handleExport);
+            document.getElementById('btnImportData').addEventListener('click', handleImport);
+            document.getElementById('btnSearch').addEventListener('click', handleSearch);
+            ['inpAirline', 'inpOrigin', 'inpDest'].forEach(id => {
+                document.getElementById(id).addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') handleSearch();
+                });
+            });
+            document.getElementById('btnSaveNotes').addEventListener('click', saveCurrentNotes);
+            document.getElementById('btnShowTC').addEventListener('click', showTcModal);
+            document.getElementById('btnDownloadCanvas').addEventListener('click', downloadCanvas);
+        }
+
+        async function refreshSidebar() {
+            state.allDatasets = await getPCCs();
+            els.pccList.innerHTML = '';
+
+            if (state.allDatasets.length === 0) {
+                els.pccList.innerHTML = '<li style="padding:1rem; color:#6b7280; font-size:0.8rem; text-align:center;">No datasets.<br>Upload an Excel file.</li>';
+                return;
+            }
+
+            state.allDatasets.forEach(ds => {
+                const li = document.createElement('li');
+                li.className = `pcc-item ${state.currentPCC === ds.id ? 'active' : ''}`;
+                li.dataset.id = ds.id; 
+                li.innerHTML = `
+                    <div class="pcc-info">
+                        <span class="pcc-name">${ds.id}</span>
+                        <button class="btn-delete-pcc" data-id="${ds.id}" title="Delete">&times;</button>
+                    </div>
+                    <div class="pcc-stats">
+                        <span>${ds.recordCount} Rules</span>
+                        <span>•</span>
+                        <span>${ds.contractCount || '?'} Contracts</span>
+                    </div>
+                    <div class="pcc-date">Upd: ${new Date(ds.updated).toLocaleDateString()}</div>
+                `;
+                li.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('btn-delete-pcc')) {
+                        deleteDataset(ds.id);
+                    } else {
+                        switchPCC(ds.id);
+                    }
+                });
+                els.pccList.appendChild(li);
+            });
+        }
+
+        async function switchPCC(id) {
+            if (state.currentPCC === id) return;
+            state.currentPCC = id;
+            
+            document.querySelectorAll('.pcc-item').forEach(li => {
+                li.classList.toggle('active', li.dataset.id === id);
+            });
+
+            const data = await getPCCData(id);
+            if (data) {
+                state.masterData = data.master;
+                state.summaryData = data.summary || [];
+                state.detailsMap = data.details || {};
+                
+                // Build Airline Code Map
+                state.airlineCodeMap = {};
+                
+                // 1. Pre-fill with Static CN Map (This ensures B8BL compatibility right away)
+                for (const [code, name] of Object.entries(AIRLINE_CN_MAP)) {
+                     state.airlineCodeMap[code] = name;
+                }
+                
+                // 2. Supplement from Summary (for any codes not in static map)
+                if (state.summaryData.length) {
+                     state.summaryData.forEach(item => {
+                         const code = item['Airline Code'];
+                         if (!code) return;
+                         const codeKey = code.toUpperCase().trim();
+                         
+                         // Try to get Name from 'Sheet Name' or 'Contract Name'
+                         const sheetName = item['Sheet Name'] || '';
+                         const match = sheetName.match(/^[A-Z0-9\/]+\s*-\s*(.+?)\s*\(/);
+                         let name = match ? match[1] : (item['Contract Name'] || item['Airline Name']);
+                         
+                         if (name && !state.airlineCodeMap[codeKey]) {
+                             state.airlineCodeMap[codeKey] = name.trim();
+                         }
+                     });
+                }
+                
+                console.log(`Switched to ${id}. Loaded ${state.masterData.length} rows. Code Map size: ${Object.keys(state.airlineCodeMap).length}`);
+                
+                if (document.getElementById('inpAirline').value) {
+                    handleSearch();
+                } else {
+                    els.resultsArea.innerHTML = `
+                        <div class="empty-state">
+                            <h3>${id} Loaded</h3>
+                            <p>${data.summary.length} Contracts found.</p>
+                            <p>Enter search criteria above.</p>
+                        </div>`;
+                    els.resultsHeader.classList.add('hidden');
+                }
+            }
+        }
+
+        async function handleUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const btn = document.querySelector('label[for="uploadExcel"]');
+            const origText = btn.innerHTML;
+            btn.innerHTML = 'Parsing...';
+            btn.style.opacity = '0.7';
+
+            try {
+                const { master, summary, details, pccSuggestion } = await parseExcelFile(file);
+                let pccId = prompt("Enter PCC Name (e.g. B8BL):", pccSuggestion || "B8BL");
+                if (!pccId) return;
+                pccId = pccId.toUpperCase().trim();
+                await savePCC(pccId, { master, summary, details });
+                alert(`Successfully imported ${pccId}`);
+                await refreshSidebar();
+                await switchPCC(pccId);
+            } catch (err) {
+                console.error(err);
+                alert("Parse Error: " + err.message);
+            } finally {
+                btn.innerHTML = origText;
+                btn.style.opacity = '1';
+                e.target.value = '';
+            }
+        }
+
+        async function deleteDataset(id) {
+            if (confirm(`Delete dataset ${id}?`)) {
+                await deletePCC(id);
+                if (state.currentPCC === id) {
+                    state.currentPCC = null;
+                    state.masterData = [];
+                    els.resultsArea.innerHTML = '';
+                }
+                refreshSidebar();
+            }
+        }
+
+        async function handleSearch() {
+            const filters = {
+                airline: document.getElementById('inpAirline').value,
+                origin: document.getElementById('inpOrigin').value,
+                dest: document.getElementById('inpDest').value,
+                date: document.getElementById('inpDate').value,
+                cabin: document.getElementById('inpCabin').value,
+                rbd: document.getElementById('inpRBD').value,
+                tourCode: document.getElementById('inpTourCode').value,
+                fareClass: document.getElementById('inpFareClass').value,
+            };
+
+            let results = [];
+            const currentOnly = els.chkCurrentPCC.checked;
+            
+            if (currentOnly) {
+                if (!state.currentPCC) {
+                    alert("Please select a dataset first.");
+                    return;
+                }
+                const res = await searchRules(state.masterData, filters, state.airlineCodeMap);
+                results = res.map(r => ({ ...r, _pcc: state.currentPCC }));
+            } else {
+                els.resultsArea.innerHTML = '<div class="empty-state">Searching all datasets...</div>';
+                for (const dsMeta of state.allDatasets) {
+                    const fullData = await getPCCData(dsMeta.id);
+                    if (fullData && fullData.master) {
+                        let localMap = {};
+                        // Re-build simple map for this dataset
+                        if (fullData.summary) {
+                             fullData.summary.forEach(item => {
+                                 const code = item['Airline Code'];
+                                 if (code) localMap[code.toUpperCase().trim()] = item['Contract Name'];
+                             });
+                        }
+                        // Merge static map
+                        for (const [c, n] of Object.entries(AIRLINE_CN_MAP)) localMap[c] = n;
+                        
+                        const subRes = await searchRules(fullData.master, filters, localMap);
+                        results.push(...subRes.map(r => ({ ...r, _pcc: dsMeta.id })));
+                    }
+                }
+            }
+            renderResults(results);
+        }
+
+        function renderResults(results) {
+            els.resultsHeader.classList.remove('hidden');
+            els.resCount.innerText = results.length;
+            els.resultsArea.innerHTML = '';
+
+            if (results.length === 0) {
+                els.resultsArea.innerHTML = '<div class="empty-state">No matching rules found.</div>';
+                return;
+            }
+
+            const displaySet = results.slice(0, 100);
+            displaySet.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                const fDate = item['First Ticketing Date'] || 'N/A';
+                const lDate = item['Last Ticketing Date'] || 'UFN';
+                const displayDate = lDate.includes('2999') ? 'UFN' : lDate;
+                const commP = item['Commission rate Adult %'];
+                const commA = item['Commission rate Adult Amount'];
+                let commDisplay = commP ? `${commP}` : (commA ? `${commA}` : '0%');
+                if (commDisplay !== '0%' && !commDisplay.includes('%')) commDisplay = '$' + commDisplay;
+                
+                // Show Validating Carrier if available, else try to derive from Name using map
+                let airlineDisplay = item.Airline;
+                const valCarrier = item['Validating Carrier'];
+                
+                if (valCarrier) {
+                    // Try to look up nice name from map
+                    const mapName = state.airlineCodeMap[valCarrier] || item.Airline;
+                    airlineDisplay = `${valCarrier} - ${mapName}`;
+                } else {
+                    // Reverse Lookup for display? 
+                    // e.g. "United Airlines" -> Find "UA" in map? Too expensive for list render.
+                    // Just display Name as is for now.
+                }
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div>
+                            <span class="card-airline">${airlineDisplay}</span>
+                            <span class="card-pcc-tag">${item._pcc}</span>
+                        </div>
+                        <div class="card-dates">
+                            Ticket By:<br>
+                            <b>${displayDate}</b>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="data-row">
+                            <span class="data-label">Route</span>
+                            <span class="data-value value-highlight">${item.Origin || 'Global'} ➝ ${item.Destination || 'Global'}</span>
+                        </div>
+                        ${item['Exclude Origin'] ? `<span class="value-exclude">Excl: ${item['Exclude Origin']}</span>` : ''}
+                        <div class="data-row">
+                            <span class="data-label">Cabin / RBD</span>
+                            <span class="data-value">${item.Cabin || 'All'} / ${item.RBD || 'All'}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Tour Code / TD</span>
+                            <span class="data-value">${item['Tour Code'] || '-'} / ${item['Ticket Designator'] || '-'}</span>
+                        </div>
+                        <div class="commission-box">
+                            <span class="comm-label">Commission</span>
+                            <span class="comm-value">${commDisplay}</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-sm btn-outline btn-detail">Details</button>
+                        <button class="btn btn-sm btn-primary btn-canvas">Checklist</button>
+                    </div>
+                `;
+                card.querySelector('.btn-detail').onclick = () => openDetailPanel(item);
+                card.querySelector('.btn-canvas').onclick = () => {
+                    document.getElementById('canvasPanel').classList.remove('hidden');
+                    els.overlay.classList.remove('hidden');
+                    renderCanvas(item, 'previewCanvas', 'textSummary');
+                };
+                els.resultsArea.appendChild(card);
+            });
+
+            if (results.length > 100) {
+                const more = document.createElement('div');
+                more.style.gridColumn = "1 / -1";
+                more.style.textAlign = "center";
+                more.style.padding = "1rem";
+                more.innerHTML = `... and ${results.length - 100} more matches. Please refine filters.`;
+                els.resultsArea.appendChild(more);
+            }
+        }
+
+        async function openDetailPanel(item) {
+            const pcc = item._pcc;
+            const airline = item.Airline;
+            const valCarrier = item['Validating Carrier'] || '';
+            
+            // Construct nice title
+            let displayTitle = airline;
+            if (valCarrier && state.airlineCodeMap[valCarrier]) {
+                displayTitle = `${valCarrier} - ${state.airlineCodeMap[valCarrier]}`;
+            }
+            
+            document.getElementById('panelTitle').innerText = `${displayTitle} (${pcc})`;
+            
+            const noteId = `${pcc}-${airline}-${item['Tour Code'] || 'GEN'}`;
+            document.getElementById('noteEn').dataset.id = noteId;
+            const notes = await getOperatorNotes(noteId) || { en: '', cn: '' };
+            document.getElementById('noteEn').value = notes.en || '';
+            document.getElementById('noteCn').value = notes.cn || '';
+            document.getElementById('noteSaveStatus').innerText = '';
+
+            const body = document.getElementById('panelBody');
+            body.innerHTML = '<p style="padding:1rem; color:#666;">Loading detail sheet...</p>';
+            document.getElementById('detailPanel').classList.remove('hidden');
+            els.overlay.classList.remove('hidden');
+
+            let targetDetailsMap = state.detailsMap;
+            if (pcc !== state.currentPCC) {
+                const d = await getPCCData(pcc);
+                targetDetailsMap = d.details;
+            }
+
+            const keys = Object.keys(targetDetailsMap);
+            let sheetName = null;
+            
+            // 1. Try match by Validating Carrier Code
+            if (valCarrier) {
+                sheetName = keys.find(k => k.startsWith(valCarrier + ' ')); 
+                if(!sheetName) sheetName = keys.find(k => k.startsWith(valCarrier + '-'));
+            }
+            
+            // 2. Try match by Airline Name or Tour Code (Advanced Heuristic)
+            if (!sheetName) {
+                sheetName = keys.find(k => k.includes(airline));
+            }
+            // 3. Try match by mapped Code if we have it
+            if (!sheetName) {
+                // Find code from map? 
+                // Too complex for inverse map, assume Name match is sufficient
+            }
+
+            if (sheetName) {
+                const detailRows = targetDetailsMap[sheetName];
+                renderDetailContent(body, sheetName, detailRows, item);
+            } else {
+                body.innerHTML = `
+                    <div class="notes-section" style="border-color: #ccc; background:#f9fafb;">
+                        <h4>Source Sheet Not Found</h4>
+                        <p>Could not auto-link a detail sheet for "${displayTitle}".</p>
+                        <p>Displaying Master Record:</p>
+                    </div>
+                    ${renderMasterRecordTable(item)}
+                `;
+            }
+        }
+
+        function renderMasterRecordTable(item) {
+            let html = '<div class="detail-section"><h5 class="section-title">Master Record</h5><table class="info-table"><tbody>';
+            for (const [k, v] of Object.entries(item)) {
+                if (k.startsWith('_')) continue;
+                html += `<tr><th>${k}</th><td>${v}</td></tr>`;
+            }
+            html += '</tbody></table></div>';
+            return html;
+        }
+
+        function renderDetailContent(container, sheetName, rows, masterItem) {
+            let html = `<div style="margin-bottom:1rem; font-weight:bold; color:#1f2937;">Source: ${sheetName}</div>`;
+            html += `<details style="margin-bottom:1rem;"><summary style="cursor:pointer; color:#2563eb;">View Master Record</summary>${renderMasterRecordTable(masterItem)}</details>`;
+
+            const sections = { conditions: [], flights: [], notes: [] };
+            let currentMode = 'conditions'; 
+            
+            rows.forEach((row) => {
+                const rowStr = Array.isArray(row) ? row.join(' ').toLowerCase() : JSON.stringify(row).toLowerCase();
+                
+                if (rowStr.includes('flight application') && rowStr.length < 50) {
+                    currentMode = 'flights';
+                    sections.flights.push(row); 
+                    return;
+                }
+                if (rowStr.includes('additional notes') || rowStr.includes('terms and conditions') || rowStr.includes('general rules')) {
+                    currentMode = 'notes';
+                    return;
+                }
+                
+                const hasContent = Array.isArray(row) ? row.some(c => c) : Object.values(row).some(c => c);
+                if (!hasContent) return; 
+
+                if (currentMode === 'flights') {
+                    sections.flights.push(row);
+                } else if (currentMode === 'notes') {
+                    const txt = Array.isArray(row) ? row.filter(c => c).join(' ') : Object.values(row).join(' ');
+                    if (txt) sections.notes.push(txt);
+                } else {
+                    sections.conditions.push(row);
+                }
+            });
+
+            if (sections.conditions.length) {
+                html += `<div class="detail-section"><h5 class="section-title">General Rules</h5>`;
+                html += arrayToTable(sections.conditions);
+                html += `</div>`;
+            }
+            if (sections.flights.length) {
+                html += `<div class="detail-section"><h5 class="section-title">Flight Application</h5>`;
+                html += arrayToTable(sections.flights);
+                html += `</div>`;
+            }
+            if (sections.notes.length) {
+                html += `<div class="detail-section"><h5 class="section-title">Additional Notes</h5><div class="note-block">${sections.notes.join('\n')}</div></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function arrayToTable(rows) {
+            if (!rows.length) return '';
+            let html = '<table class="info-table">';
+            
+            let headers = [];
+            if (Array.isArray(rows[0])) {
+                headers = rows[0];
+            } else {
+                headers = Object.keys(rows[0]);
+            }
+
+            html += '<thead><tr>';
+            headers.forEach(cell => html += `<th>${cell || ''}</th>`);
+            html += '</tr></thead><tbody>';
+            
+            for (let i = 1; i < rows.length; i++) {
+                html += '<tr>';
+                if (Array.isArray(rows[i])) {
+                    rows[i].forEach(cell => html += `<td>${cell || ''}</td>`);
+                } else {
+                    headers.forEach(h => html += `<td>${rows[i][h] || ''}</td>`);
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+            return html;
+        }
+
+        async function saveCurrentNotes() {
+            const id = document.getElementById('noteEn').dataset.id;
+            if (!id) return;
+            const notes = { en: document.getElementById('noteEn').value, cn: document.getElementById('noteCn').value };
+            await saveOperatorNotes(id, notes);
+            const status = document.getElementById('noteSaveStatus');
+            status.innerText = 'Saved!';
+            setTimeout(() => status.innerText = '', 2000);
+        }
+
+        function showTcModal() {
+            const grid = document.getElementById('tcContent');
+            grid.innerHTML = getTcDefinitionHtml();
+            document.getElementById('tcModal').classList.remove('hidden');
+        }
+
+        async function handleExport() {
+            const json = await exportDB();
+            const blob = new Blob([json], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `commission_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        async function handleImport() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = async (evt) => {
+                    try {
+                        await importDB(evt.target.result);
+                        alert("Import successful!");
+                        refreshSidebar();
+                    } catch (err) {
+                        alert("Import failed: " + err);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+    </script>
+</body>
+</html>
