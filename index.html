@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDS 证件提取工具 (Sabre & Amadeus)</title>
+    
+    <!-- 1. 加载 Tailwind CSS 样式库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. 加载 Babel (用于解析 React 代码) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 3. 配置 Import Map (让浏览器知道去哪里加载 React) -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+      }
+    }
+    </script>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <!-- 4. 你的 React 代码 -->
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { Clipboard, Plane, ArrowRight, Database, RefreshCw, Trash2, CheckCircle, AlertCircle, FileText, Upload, Camera, Loader2, FileUp, Settings, Key, X, Calendar, MapPin } from 'lucide-react';
+
+        // ==========================================
+        // 配置区域
+        const defaultApiKey = ""; 
+        // ==========================================
+
+        const months = {
+            JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
+            JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12'
+        };
+        
+        const monthNamesArr = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+        const monthMapCN = {
+            JAN: '1月', FEB: '2月', MAR: '3月', APR: '4月', MAY: '5月', JUN: '6月',
+            JUL: '7月', AUG: '8月', SEP: '9月', OCT: '10月', NOV: '11月', DEC: '12月'
+        };
+
+        // 海量扩充后的机场代码库 (500+)
+        const airportDb = {
+            // --- 英国 (大幅扩充) ---
+            'LHR': '伦敦希思罗', 'LGW': '伦敦盖特威克', 'STN': '伦敦斯坦斯特德', 'LTN': '伦敦卢顿', 'LCY': '伦敦城市', 'SEN': '伦敦南安普顿',
+            'MAN': '曼彻斯特', 'BHX': '伯明翰', 'EDI': '爱丁堡', 'GLA': '格拉斯哥', 'ABZ': '阿伯丁',
+            'BHD': '贝尔法斯特城市', 'BFS': '贝尔法斯特国际', 'BRS': '布里斯托', 'LPL': '利物浦', 'LBA': '利兹布拉德福德',
+            'NCL': '纽卡斯尔', 'EMA': '东米德兰', 'SOU': '南安普顿', 'CWL': '加的夫', 'EXT': '埃克塞特',
+            'BOH': '伯恩茅斯', 'NQY': '新基', 'PIK': '格拉斯哥普雷斯蒂克', 'INV': '因弗内斯', 'KOI': '柯克沃尔', 'LSI': '萨姆堡', 'HUY': '亨伯赛德', 'MME': '蒂赛德', 'NWI': '诺维奇', 'DND': '邓迪',
+
+            // --- 爱尔兰 ---
+            'DUB': '都柏林', 'ORK': '科克', 'SNN': '香农', 'NOC': '诺克',
+
+            // --- 南非洲 ---
+            'JNB': '约翰内斯堡', 'CPT': '开普敦', 'DUR': '德班', 'HLA': '兰塞利亚(约堡)',
+            'PLZ': '伊丽莎白港', 'ELS': '东伦敦', 'GRJ': '乔治', 'BFN': '布隆方丹', 'KIM': '金伯利',
+            'HDS': '胡德斯普雷特', 'MQP': '内尔斯普雷特', 'PHW': '法拉博鲁瓦', 'PTG': '波罗克瓦尼', 'RCB': '理查兹湾', 'UTT': '穆塔塔',
+            'WDH': '温得和克', 'WVB': '沃尔维斯湾',
+            'GBE': '哈博罗内', 'BBK': '卡萨内', 'MUB': '马翁',
+            'HRE': '哈拉雷', 'VFA': '维多利亚瀑布', 'BUQ': '布拉瓦约',
+            'LUN': '卢萨卡', 'LVI': '利文斯顿', 'NLA': '恩多拉',
+            'MPM': '马普托', 'VNX': '维兰库洛', 'POL': '彭巴',
+            'MTS': '曼齐尼', 'MSU': '马塞卢',
+
+            // --- 欧洲大陆 ---
+            'CDG': '巴黎戴高乐', 'ORY': '巴黎奥利', 'NCE': '尼斯', 'LYS': '里昂', 'MRS': '马赛', 'TLS': '图卢兹', 'BOD': '波尔多', 'NTE': '南特', 'BSL': '巴塞尔',
+            'AMS': '阿姆斯特丹', 'RTM': '鹿特丹', 'EIN': '埃因霍温', 'BRU': '布鲁塞尔', 'CRL': '沙勒罗瓦', 'LUX': '卢森堡',
+            'FRA': '法兰克福', 'MUC': '慕尼黑', 'BER': '柏林', 'DUS': '杜塞尔多夫', 'HAM': '汉堡', 'STR': '斯图加特', 'CGN': '科隆', 'HAJ': '汉诺威', 'NUE': '纽伦堡', 'BRE': '不来梅',
+            'ZRH': '苏黎世', 'GVA': '日内瓦', 'VIE': '维也纳', 'SZG': '萨尔茨堡', 'INN': '因斯布鲁克',
+            'CPH': '哥本哈根', 'BLL': '比隆', 'AAL': '奥尔堡',
+            'OSL': '奥斯陆', 'BGO': '卑尔根', 'SVG': '斯塔万格', 'TRD': '特隆赫姆', 'TOS': '特罗姆瑟', 'BOO': '博德', 'SVJ': '斯沃尔韦尔', 'AES': '奥勒松', 'KRS': '克里斯蒂安桑', 'EVE': '哈尔斯塔', 'ALF': '阿尔塔',
+            'ARN': '斯德哥尔摩', 'GOT': '哥德堡', 'HEL': '赫尔辛基', 'RVN': '罗瓦涅米', 'IVL': '伊瓦洛', 'KEF': '雷克雅未克',
+            'WAW': '华沙', 'KRK': '克拉科夫', 'GDN': '格但斯克', 'PRG': '布拉格', 'BUD': '布达佩斯',
+            'FCO': '罗马菲乌米奇诺', 'CIA': '罗马钱皮诺', 'MXP': '米兰马尔彭萨', 'LIN': '米兰利纳特', 'BGY': '米兰贝尔加莫',
+            'VCE': '威尼斯', 'BLQ': '博洛尼亚', 'FLR': '佛罗伦萨', 'PSA': '比萨', 'NAP': '那不勒斯', 'VRN': '维罗纳', 'TRN': '都灵', 'GOA': '热那亚',
+            'CTA': '卡塔尼亚', 'PMO': '巴勒莫', 'OLB': '奥尔比亚', 'CAG': '卡利亚里', 'BRI': '巴里', 'SUF': '拉梅齐亚泰尔梅',
+            'MAD': '马德里', 'BCN': '巴塞罗那', 'AGP': '马拉加', 'ALC': '阿利坎特', 'VLC': '瓦伦西亚', 'SVQ': '塞维利亚', 'BIO': '毕尔巴鄂',
+            'PMI': '帕尔马', 'LPA': '大加那利', 'TFS': '特内里费南', 'TFN': '特内里费北', 'ACE': '兰萨罗特', 'IBZ': '伊维萨',
+            'LIS': '里斯本', 'OPO': '波尔图', 'FAO': '法鲁', 'FNC': '丰沙尔',
+            'ATH': '雅典', 'SKG': '塞萨洛尼基', 'HER': '伊拉克利翁', 'JTR': '圣托里尼', 'JMK': '米克诺斯', 'RHO': '罗德岛', 'CHQ': '哈尼亚', 'CFU': '科孚',
+            'IST': '伊斯坦布尔', 'SAW': '伊斯坦布尔萨比哈', 'ESB': '安卡拉', 'AYT': '安塔利亚', 'ADB': '伊兹密尔', 'DLM': '达拉曼', 'BJV': '博德鲁姆',
+            'MLA': '马耳他', 'LCA': '拉纳卡', 'PFO': '帕福斯',
+            'SVO': '莫斯科谢列梅捷沃', 'DME': '莫斯科多莫杰多沃', 'VKO': '莫斯科伏努科沃', 'LED': '圣彼得堡',
+            'OTP': '布加勒斯特', 'BEG': '贝尔格莱德', 'ZAG': '萨格勒布', 'SOF': '索菲亚', 'KIV': '基希讷乌', 'MSQ': '明斯克', 'RIX': '里加', 'TLL': '塔林', 'VNO': '维尔纽斯',
+
+            // --- 北美 ---
+            'JFK': '纽约肯尼迪', 'EWR': '纽瓦克', 'LGA': '纽约拉瓜迪亚', 'LAX': '洛杉矶', 'SFO': '旧金山', 'SEA': '西雅图',
+            'ORD': '芝加哥', 'DFW': '达拉斯', 'IAH': '休斯顿', 'ATL': '亚特兰大', 'MIA': '迈阿密', 'MCO': '奥兰多',
+            'BOS': '波士顿', 'IAD': '华盛顿杜勒斯', 'DCA': '华盛顿里根', 'PHL': '费城', 'LAS': '拉斯维加斯',
+            'YVR': '温哥华', 'YYZ': '多伦多', 'YUL': '蒙特利尔', 'YYC': '卡尔加里',
+            'MEX': '墨西哥城', 'CUN': '坎昆', 'MTY': '蒙特雷', 'GDL': '瓜达拉哈拉', 'QRO': '克雷塔罗', 'HUX': '瓦图尔科', 'PVR': '普埃尔托瓦拉塔', 'SJD': '洛斯卡沃斯', 'MID': '梅里达', 'TIJ': '蒂华纳', 'VER': '韦拉克鲁斯',
+
+            // --- 南美/加勒比 (更新) ---
+            'GRU': '圣保罗', 'CGH': '圣保罗孔戈尼亚斯', 'GIG': '里约热内卢', 'SDU': '里约圣杜蒙特', 'VCP': '维拉库波斯',
+            'BSB': '巴西利亚', 'SSA': '萨尔瓦多', 'CNF': '贝洛奥里藏特', 'REC': '累西腓', 'FOR': '福塔雷萨', 'MAO': '玛瑙斯', 'CWB': '库里蒂巴', 'FLN': '弗洛里亚诺波利斯', 'POA': '阿雷格里港',
+            'EZE': '布宜诺斯艾利斯', 'AEP': '布宜诺斯艾利斯(AEP)', 'USH': '乌斯怀亚', 'IGR': '伊瓜苏瀑布',
+            'SCL': '圣地亚哥', 'LIM': '利马', 'CUZ': '库斯科', 'BOG': '波哥大', 'MDE': '麦德林', 'CTG': '卡塔赫纳', 'LPB': '拉巴斯',
+            'PTY': '巴拿马城', 'CCS': '加拉加斯', 'UIO': '基多', 'GYE': '瓜亚基尔',
+            'SXM': '圣马丁', 'KIN': '金斯顿', 'MBJ': '蒙特哥贝', 'HAV': '哈瓦那', 'PUJ': '蓬塔卡纳', 'NAS': '拿骚', 'GCM': '大开曼',
+
+            // --- 亚太/大洋洲 ---
+            'HND': '东京羽田', 'NRT': '东京成田', 'KIX': '大阪关西', 'ICN': '首尔仁川', 'UBN': '乌兰巴托',
+            'SIN': '新加坡', 'BKK': '曼谷', 'HKT': '普吉', 'KUL': '吉隆坡', 'MNL': '马尼拉', 'CGK': '雅加达', 'DPS': '巴厘岛', 'SGN': '胡志明', 'KTI': '桔井',
+            'SYD': '悉尼', 'MEL': '墨尔本', 'BNE': '布里斯班', 'PER': '珀斯', 'ADL': '阿德莱德', 'OOL': '黄金海岸',
+            'AKL': '奥克兰', 'CHC': '基督城', 'ZQN': '皇后镇', 'WLG': '惠灵顿',
+            'MGB': '甘比尔山', 'RMA': '罗马(澳洲)', 'CNS': '凯恩斯', 'NAN': '楠迪',
+
+            // --- 中东/北非 ---
+            'DXB': '迪拜', 'DOH': '多哈', 'AUH': '阿布扎比', 'RUH': '利雅得', 'JED': '吉达', 'MCT': '马斯喀特',
+            'TLV': '特拉维夫', 'BEY': '贝鲁特', 'AMM': '安曼', 'IKA': '德黑兰', 'SHJ': '沙迦',
+            'CAI': '开罗', 'LXR': '卢克索', 'HRG': '赫尔格达', 'SSH': '沙姆沙伊赫', 'CMN': '卡萨布兰卡', 'RAK': '马拉喀什', 'TUN': '突尼斯', 'ALG': '阿尔及尔',
+
+            // --- 其他非洲 ---
+            'ADD': '亚的斯亚贝巴', 'NBO': '内罗毕', 'MRU': '毛里求斯', 'SEZ': '塞舌尔', 'LOS': '拉各斯', 'ACC': '阿克拉', 'DAR': '达累斯萨拉姆', 'ZNZ': '桑给巴尔',
+
+            // --- 中国国内 ---
+            'PEK': '北京首都', 'PKX': '北京大兴', 'PVG': '上海浦东', 'SHA': '上海虹桥', 'CAN': '广州白云', 'SZX': '深圳宝安',
+            'CTU': '成都双流', 'TFU': '成都天府', 'CKG': '重庆江北', 'KMG': '昆明长水', 'XIY': '西安咸阳', 'HGH': '杭州萧山',
+            'NKG': '南京禄口', 'WUH': '武汉天河', 'CSX': '长沙黄花', 'XMN': '厦门高崎', 'FOC': '福州长乐', 'CGO': '郑州新郑',
+            'TSN': '天津滨海', 'DLC': '大连周水子', 'SHE': '沈阳桃仙', 'HRB': '哈尔滨太平', 'TAO': '青岛胶东',
+            'HAK': '海口美兰', 'SYX': '三亚凤凰', 'LSA': '拉萨贡嘎', 'LXA': '拉萨贡嘎', 'LZY': '林芝米林', 'HKG': '香港', 'MFM': '澳门', 'TPE': '台北桃园'
+        };
+
+        const parseDate = (dateStr) => {
+            if (!dateStr) return '';
+            let day, mon, yr, fullYear;
+            if (dateStr.length === 7) {
+                day = dateStr.substring(0, 2);
+                mon = dateStr.substring(2, 5).toUpperCase();
+                yr = dateStr.substring(5, 7);
+                fullYear = parseInt(yr) > 50 ? `19${yr}` : `20${yr}`;
+            } else if (dateStr.length === 9) {
+                day = dateStr.substring(0, 2);
+                mon = dateStr.substring(2, 5).toUpperCase();
+                yr = dateStr.substring(5, 9);
+                fullYear = yr;
+            } else {
+                return dateStr;
+            }
+            const m = months[mon] || '00';
+            return `${fullYear}-${m}-${day}`;
+        };
+
+        const formatDateForGDS = (isoDate) => {
+            if (!isoDate) return '';
+            const d = new Date(isoDate);
+            const day = String(d.getDate()).padStart(2, '0');
+            const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            const mon = monthNames[d.getMonth()];
+            const yr = String(d.getFullYear()).slice(-2);
+            return `${day}${mon}${yr}`;
+        };
+
+        const parseFlightDateCN = (dateStr) => {
+            if (!dateStr || dateStr.length < 5) return dateStr;
+            const day = dateStr.substring(0, 2);
+            const mon = dateStr.substring(2, 5).toUpperCase();
+            const monCN = monthMapCN[mon] || mon;
+            return `${monCN}${day}`;
+        };
+
+        const calculateOffset = (depDateStr, arrIndicator) => {
+            if (!arrIndicator) return '';
+            if (arrIndicator === '+1') return ' +1';
+            if (arrIndicator === '-1') return ' -1';
+            if (!/^\d{2}[A-Z]{3}$/i.test(arrIndicator)) return '';
+
+            const parseToDate = (str) => {
+                const d = parseInt(str.substring(0, 2));
+                const mStr = str.substring(2, 5).toUpperCase();
+                const mIndex = monthNamesArr.indexOf(mStr);
+                if (mIndex === -1) return null;
+                return new Date(2024, mIndex, d);
+            };
+
+            const dep = parseToDate(depDateStr);
+            const arr = parseToDate(arrIndicator);
+
+            if (!dep || !arr) return '';
+
+            let diffTime = arr - dep;
+            let diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+            if (diffDays < -300) diffDays += 366; 
+            if (diffDays > 300) diffDays -= 366;
+
+            diffDays = Math.round(diffDays);
+
+            if (diffDays === 0) return '';
+            return diffDays > 0 ? ` +${diffDays}` : ` ${diffDays}`;
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('docs'); 
+            const [inputText, setInputText] = useState('');
+            const [results, setResults] = useState([]);
+            const [flightResults, setFlightResults] = useState([]);
+            const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+            const [isScanning, setIsScanning] = useState(false);
+            const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 });
+            
+            const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('gds_tool_api_key') || '');
+            const [showSettings, setShowSettings] = useState(false);
+            const [tempKey, setTempKey] = useState('');
+
+            const imageInputRef = useRef(null);
+            const textInputRef = useRef(null);
+
+            const handleSaveKey = () => {
+                localStorage.setItem('gds_tool_api_key', tempKey);
+                setUserApiKey(tempKey);
+                setShowSettings(false);
+                showToast('API Key 已保存', 'success');
+            };
+
+            const handleClearKey = () => {
+                localStorage.removeItem('gds_tool_api_key');
+                setUserApiKey('');
+                setTempKey('');
+                showToast('API Key 已清除', 'success');
+            };
+
+            useEffect(() => {
+                setTempKey(userApiKey);
+            }, [userApiKey, showSettings]);
+
+            const showToast = (message, type = 'success') => {
+                setToast({ show: true, message, type });
+                setTimeout(() => setToast({ ...toast, show: false }), 3000);
+            };
+
+            const clearAll = () => {
+                setInputText('');
+                setResults([]);
+                setFlightResults([]);
+            };
+
+            const copyToClipboard = (text) => {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-9999px";
+                textArea.style.top = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) showToast('已复制到剪贴板');
+                    else showToast('复制失败', 'error');
+                } catch (err) {
+                    showToast('复制出错', 'error');
+                }
+                document.body.removeChild(textArea);
+            };
+
+            const handleTextUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                const text = event.target.result;
+                setInputText(prev => {
+                    const separator = prev ? '\n\n' : '';
+                    return prev + separator + text;
+                });
+                showToast('文本文件导入成功', 'success');
+                };
+                reader.readAsText(file);
+                if (textInputRef.current) textInputRef.current.value = '';
+            };
+
+            const processSingleImage = async (file) => {
+                const effectiveKey = userApiKey || defaultApiKey;
+                if (!effectiveKey) {
+                    setShowSettings(true);
+                    showToast('请先配置 Google Gemini API Key', 'error');
+                    return null;
+                }
+                return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = async () => {
+                    try {
+                    const base64Data = reader.result.split(',')[1];
+                    const response = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${effectiveKey}`,
+                        {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                            role: "user",
+                            parts: [
+                                { text: "Extract passport details from this image. Return ONLY a JSON object with these keys: docType (P for passport), issueCountry (3 letter code), number, nationality (3 letter code), dob (DDMMMYY format), gender (M/F), expiry (DDMMMYY format), surname, firstname." },
+                                { inlineData: { mimeType: file.type, data: base64Data } }
+                            ]
+                            }],
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                        }
+                    );
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) throw new Error("No data extracted");
+                    const extracted = JSON.parse(text);
+                    resolve({
+                        id: Date.now() + Math.random(),
+                        source: 'AI Scan',
+                        type: 'DOCS',
+                        docType: extracted.docType || 'P',
+                        issueCountry: extracted.issueCountry || 'XXX',
+                        number: extracted.number || '',
+                        nationality: extracted.nationality || 'XXX',
+                        dob: extracted.dob || '',
+                        gender: extracted.gender || 'M',
+                        expiry: extracted.expiry || '',
+                        surname: extracted.surname || '',
+                        firstname: extracted.firstname || '',
+                        paxRef: '1',
+                        raw: `Passport Image: ${file.name}`
+                    });
+                    } catch (err) {
+                    console.error(`Error processing ${file.name}:`, err);
+                    showToast(`识别错误: ${err.message}`, 'error');
+                    resolve(null);
+                    }
+                };
+                reader.onerror = () => resolve(null);
+                });
+            };
+
+            const handleBatchImageUpload = async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                const effectiveKey = userApiKey || defaultApiKey;
+                if (!effectiveKey) {
+                    setShowSettings(true);
+                    showToast('请先配置 API Key', 'error');
+                    return;
+                }
+                setIsScanning(true);
+                setScanProgress({ current: 0, total: files.length });
+                let successCount = 0;
+                for (let i = 0; i < files.length; i++) {
+                setScanProgress({ current: i + 1, total: files.length });
+                const result = await processSingleImage(files[i]);
+                if (result) {
+                    setResults(prev => [result, ...prev]);
+                    successCount++;
+                }
+                }
+                setIsScanning(false);
+                if (imageInputRef.current) imageInputRef.current.value = '';
+                if (successCount > 0) {
+                showToast(`成功识别 ${successCount} 张图片`, 'success');
+                } else {
+                showToast('识别完成，未提取到有效信息', 'info');
+                }
+            };
+
+            const preprocessInput = (text) => {
+                const lines = text.split('\n');
+                const mergedLines = [];
+                lines.forEach((line) => {
+                    const cleanLine = line.trim();
+                    if (!cleanLine) return;
+                    const isContinuation = cleanLine.startsWith('/') || /^[A-Z]+\/[A-Z]+/.test(cleanLine);
+                    const prevLineIndex = mergedLines.length - 1;
+                    if (mergedLines.length > 0 && isContinuation) {
+                        mergedLines[prevLineIndex] += cleanLine;
+                    } else if (mergedLines.length > 0 && /^\s+/.test(line) && !/^\d+\./.test(cleanLine) && !/^(SSR|3|SR)/i.test(cleanLine)) {
+                        mergedLines[prevLineIndex] += cleanLine;
+                    } else {
+                        mergedLines.push(cleanLine);
+                    }
+                });
+                return mergedLines;
+            };
+
+            const parseDocsInput = () => {
+                const preprocessedLines = preprocessInput(inputText);
+                const parsedData = [];
+                
+                const amadeusDocsRegex = /(?:^\s*\d+[\.\s]*)?(?:SR|SSR)\s*DOCS\s*(?:[A-Z0-9]{2})?\s*(?:HK|KK|NN|UC|NO|TE)\d*[-]([A-Z])[-]([A-Z]{3})[-]([A-Z0-9]+)[-]([A-Z]{3})[-]([\d]{2}[A-Z]{3}[\d]{2,4})[-]([MFI])[-]([\d]{2}[A-Z]{3}[\d]{2,4})[-]([A-Z]+)[-]([A-Z]+)(?:\/P(\d+))?/i;
+                const sabre3DocsRegex = /(?:^\s*\d+[\.\s]*)?3DOCS\/([A-Z])\/([A-Z]{3})\/([A-Z0-9]+)\/([A-Z]{3})\/([\d]{2}[A-Z]{3}[\d]{2,4})\/([MFI])\/([\d]{2}[A-Z]{3}[\d]{2,4})\/([A-Z]+)\/([A-Z]+)/i;
+                const sabreSSRRegex = /(?:^\s*\d+[\.\s]*)?(?:SR|SSR)\s*DOCS\s*(?:[A-Z0-9]{2})?\s*(?:HK|KK|NN|UC|NO|TE)\d*(?:\/)([A-Z])(?:\/)([A-Z]{3})(?:\/)([A-Z0-9]+).*?(?:\/)([A-Z]{3})(?:\/)([\d]{2}[A-Z]{3}[\d]{2,4})(?:\/)([MFI])(?:\/)([\d]{2}[A-Z]{3}[\d]{2,4})(?:\/)([A-Z]+)(?:\/)([A-Z]+)/i;
+                const foidRegex = /(?:^\s*\d+[\.\s]*)?(?:SR|SSR|3|FOID)\s*(?:FOID)?\s*(?:\/)?(?:[A-Z0-9]{2})?\s*(?:HK|KK|NN)?\d*[-/]([A-Z]{2})([A-Z0-9]+)(?:\/P(\d+))?/i;
+
+                preprocessedLines.forEach((line, index) => {
+                    let cleanLine = line;
+                    let paxRef = '1';
+                    const sabreNoiseMatch = line.match(/\s+(\d+)\.(\d+)\s+[A-Z]+\/[A-Z]+/);
+                    if (sabreNoiseMatch) paxRef = sabreNoiseMatch[2]; 
+
+                    let match = cleanLine.match(amadeusDocsRegex);
+                    if (match) {
+                        parsedData.push({ id: index + Math.random(), source: 'Amadeus (1A)', type: 'DOCS', docType: match[1], issueCountry: match[2], number: match[3], nationality: match[4], dob: match[5], gender: match[6], expiry: match[7], surname: match[8], firstname: match[9], paxRef: match[10] || paxRef });
+                        return;
+                    }
+                    match = cleanLine.match(sabre3DocsRegex);
+                    if (match) {
+                        parsedData.push({ id: index + Math.random(), source: 'Sabre (1S)', type: 'DOCS', docType: match[1], issueCountry: match[2], number: match[3], nationality: match[4], dob: match[5], gender: match[6], expiry: match[7], surname: match[8], firstname: match[9], paxRef: paxRef });
+                        return;
+                    }
+                    match = cleanLine.match(sabreSSRRegex);
+                    if (match) {
+                        parsedData.push({ id: index + Math.random(), source: 'Sabre (*P3D)', type: 'DOCS', docType: match[1], issueCountry: match[2], number: match[3], nationality: match[4], dob: match[5], gender: match[6], expiry: match[7], surname: match[8], firstname: match[9], paxRef: paxRef });
+                        return;
+                    }
+                    match = cleanLine.match(foidRegex);
+                    if (match) {
+                        parsedData.push({ id: index + Math.random(), source: 'FOID', type: 'FOID', foidType: match[1], number: match[2], paxRef: match[3] || '1' });
+                        return;
+                    }
+                });
+
+                if (parsedData.length === 0 && inputText.trim().length > 0) showToast('未能识别有效格式，请检查输入', 'error');
+                else if (parsedData.length > 0) showToast(`成功提取 ${parsedData.length} 条记录`, 'success');
+                
+                setResults(prev => [...parsedData, ...prev]);
+            };
+
+            // --- Flight Parsing Logic ---
+            const parseFlightInput = () => {
+                const lines = inputText.split('\n');
+                const parsedFlights = [];
+                
+                // FLIGHT REGEX V4: Handle messy mergers (ZL4617G) and separate blocks (NP 71 B)
+                // Logic: 
+                // 1. Line number at start
+                // 2. Airline (2 chars)
+                // 3. Flight number (1-4 digits)
+                // 4. Class (Optional, can be attached or detached)
+                // 5. Date (DDMMM)
+                const flightRegex = /^\s*(\d+)\s+([A-Z0-9]{2})\s*(\d{1,4})(?:(?:[A-Z])|(?:\s+[A-Z]))?\s+(\d{2}[A-Z]{3})\s*(?:\d)?\s+([A-Z]{3})([A-Z]{3})(?:[\s\*]+[A-Z]{2}\d{0,2})?\s+(\d{4})\s+(\d{4})(?:\s*(\+1|-1|\d{2}[A-Z]{3}))?/i;
+
+                lines.forEach(line => {
+                    const cleanLine = line.trim();
+                    if (!cleanLine) return;
+                    
+                    const match = cleanLine.match(flightRegex);
+                    if (match) {
+                        const depDate = match[4];
+                        const depCode = match[5];
+                        const arrCode = match[6];
+                        const arrIndicator = match[9]; 
+                        const depName = airportDb[depCode] || '';
+                        const arrName = airportDb[arrCode] || '';
+                        
+                        let routeStr = '';
+                        if (depName && arrName) routeStr = `${depName}-${arrName}`;
+                        else routeStr = `${depName}${arrName}`;
+                        
+                        const dateOffsetStr = calculateOffset(depDate, arrIndicator);
+
+                        const formatted = `${match[1]} ${match[2]} ${match[3]} ${parseFlightDateCN(depDate)} ${depCode}${arrCode} ${routeStr} ${match[7]} ${match[8]}${dateOffsetStr}`;
+                        
+                        parsedFlights.push({
+                            original: line,
+                            formatted: formatted
+                        });
+                    }
+                });
+
+                if (parsedFlights.length === 0 && inputText.trim().length > 0) showToast('未能识别航班格式，请检查输入', 'error');
+                else if (parsedFlights.length > 0) showToast(`成功解析 ${parsedFlights.length} 条航班`, 'success');
+
+                setFlightResults(parsedFlights);
+            };
+
+            const handleParse = () => {
+                if (activeTab === 'docs') {
+                    parseDocsInput();
+                } else {
+                    parseFlightInput();
+                }
+            };
+
+            const generateAmadeusString = (item) => {
+                const dob = formatDateForGDS(parseDate(item.dob));
+                const expiry = formatDateForGDS(parseDate(item.expiry));
+                if (item.type === 'DOCS') {
+                    return `SR DOCS YY HK1-${item.docType}-${item.issueCountry}-${item.number}-${item.nationality}-${dob}-${item.gender}-${expiry}-${item.surname}-${item.firstname}/P${item.paxRef}`;
+                } else if (item.type === 'FOID') {
+                    return `SR FOID YY HK1-${item.foidType}${item.number}/P${item.paxRef}`;
+                }
+                return '';
+            };
+
+            const generateSabreString = (item) => {
+                const dob = formatDateForGDS(parseDate(item.dob));
+                const expiry = formatDateForGDS(parseDate(item.expiry));
+                if (item.type === 'DOCS') {
+                    return `3DOCS/${item.docType}/${item.issueCountry}/${item.number}/${item.nationality}/${dob}/${item.gender}/${expiry}/${item.surname}/${item.firstname}`;
+                } else if (item.type === 'FOID') {
+                    return `3FOID/${item.foidType}${item.number}`;
+                }
+                return '';
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
+                <div className="max-w-6xl mx-auto space-y-6">
+                    
+                    {/* Header */}
+                    <header className="flex items-center justify-between border-b border-slate-200 pb-6 relative">
+                    <div className="flex items-center space-x-3">
+                        <div className="bg-blue-600 p-3 rounded-lg shadow-lg shadow-blue-200">
+                        <Plane className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                        <h1 className="text-2xl font-bold text-slate-900">GDS 工具箱</h1>
+                        <p className="text-slate-500 text-sm">支持 Sabre & Amadeus 证件提取与航班信息解析</p>
+                        </div>
+                    </div>
+                    
+                    <button onClick={() => setShowSettings(true)} className="p-2 rounded-full hover:bg-slate-200 text-slate-500 transition-colors" title="设置 API Key">
+                        <Settings className="w-6 h-6" />
+                    </button>
+                    </header>
+
+                    {/* Settings Modal */}
+                    {showSettings && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-bold flex items-center"><Key className="w-5 h-5 mr-2 text-indigo-600" />配置 AI 识别服务</h3>
+                                    <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+                                </div>
+                                <div className="space-y-4">
+                                    <p className="text-sm text-slate-600">请输入 Google Gemini API Key 以启用护照识别功能：</p>
+                                    <input type="password" value={tempKey} onChange={(e) => setTempKey(e.target.value)} placeholder="输入 API Key (AIza...)" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm" />
+                                    <div className="flex justify-between pt-2">
+                                        <button onClick={handleClearKey} className="text-xs text-red-500 hover:text-red-700 px-2 py-1">清除 Key</button>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setShowSettings(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
+                                            <button onClick={handleSaveKey} className="px-4 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg">保存</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tabs */}
+                    <div className="flex space-x-1 bg-slate-200 p-1 rounded-xl w-fit">
+                        <button
+                            onClick={() => { setActiveTab('docs'); setInputText(''); setResults([]); setFlightResults([]); }}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'docs' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <span className="flex items-center"><FileText className="w-4 h-4 mr-2" /> 证件提取 (DOCS/FOID)</span>
+                        </button>
+                        <button
+                            onClick={() => { setActiveTab('flight'); setInputText(''); setResults([]); setFlightResults([]); }}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'flight' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <span className="flex items-center"><Calendar className="w-4 h-4 mr-2" /> 航班信息解析</span>
+                        </button>
+                    </div>
+
+                    {/* DOCS Actions */}
+                    {activeTab === 'docs' && (
+                        <div className="flex flex-wrap gap-4 mb-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <input type="file" accept="image/*" multiple className="hidden" ref={imageInputRef} onChange={handleBatchImageUpload} />
+                        <input type="file" accept=".txt" className="hidden" ref={textInputRef} onChange={handleTextUpload} />
+                        <button onClick={() => imageInputRef.current?.click()} disabled={isScanning} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm flex items-center transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            {isScanning ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 处理中 ({scanProgress.current}/{scanProgress.total})...</> : <><Camera className="w-4 h-4 mr-2" /> 上传护照图片</>}
+                        </button>
+                        <button onClick={() => textInputRef.current?.click()} className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg shadow-sm flex items-center transition-all">
+                            <FileUp className="w-4 h-4 mr-2" /> 导入文本文件
+                        </button>
+                        </div>
+                    )}
+
+                    {/* Input Section */}
+                    <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <h2 className="font-semibold text-slate-700 flex items-center">
+                        <Database className="w-4 h-4 mr-2" />
+                        {activeTab === 'docs' ? '原始指令输入 (PNR Text)' : '航班信息输入 (Flight Lines)'}
+                        </h2>
+                        <div className="flex space-x-2">
+                        <button onClick={clearAll} className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors flex items-center"><Trash2 className="w-3 h-3 mr-1" /> 清空</button>
+                        </div>
+                    </div>
+                    <div className="p-4">
+                        <textarea
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder={activeTab === 'docs' 
+                            ? `请粘贴 PNR 内容或上传文本文件。支持 Sabre *P3D 多行格式...\n例: 1.SSR DOCS TU HK1/P/MA/JP2735835...` 
+                            : `请粘贴航班行。\n支持 Sabre/Amadeus 格式：\nSabre:   1 CA 848Y 02MAR 1 LGWPVG SS1 1105 0625\nAmadeus: 1 MU 202 Y 23MAR 1 LGWPVG DK1 1030 0605\nAmadeus (Arr Date): 2 CX 880 Y 23MAR 1 HKGLAX DK1 0030 2155 22MAR`}
+                        className="w-full h-40 p-4 font-mono text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-y whitespace-pre"
+                        />
+                        <div className="mt-4 flex justify-end">
+                        <button onClick={handleParse} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium shadow-sm hover:shadow transition-all flex items-center">
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            {activeTab === 'docs' ? '提取证件' : '解析航班'}
+                        </button>
+                        </div>
+                    </div>
+                    </section>
+
+                    {/* DOCS Results */}
+                    {activeTab === 'docs' && results.length > 0 && (
+                    <section className="space-y-4">
+                        <div className="flex items-center justify-between"><h3 className="text-lg font-bold text-slate-800 flex items-center"><FileText className="w-5 h-5 mr-2 text-blue-600" /> 提取结果 ({results.length})</h3></div>
+                        <div className="grid grid-cols-1 gap-6">
+                        {results.map((item, idx) => (
+                            <div key={item.id || idx} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
+                                <div className="flex items-center space-x-3">
+                                <span className={`px-2 py-1 text-xs font-bold rounded uppercase tracking-wider ${item.type === 'DOCS' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>{item.type}</span>
+                                <span className="text-sm text-slate-500 font-mono">P{item.paxRef}</span>
+                                <span className="text-xs text-slate-400 border border-slate-200 rounded px-2">来源: {item.source}</span>
+                                </div>
+                            </div>
+                            <div className="p-6">
+                                {item.type === 'DOCS' ? (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">姓名 (Name)</label><div className="font-semibold text-lg text-slate-800">{item.surname}/{item.firstname}</div></div>
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">证件号码 (Doc No)</label><div className="font-mono text-slate-700 bg-slate-100 inline-block px-2 rounded border border-slate-200">{item.number}</div></div>
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">类型/国籍 (Type/Nat)</label><div className="text-slate-700">{item.docType} / {item.nationality} ({item.issueCountry})</div></div>
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">生日/性别 (DOB/Gen)</label><div className="text-slate-700">{parseDate(item.dob)} <span className="text-slate-400 mx-1">|</span> {item.gender}</div></div>
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">有效期 (Expiry)</label><div className="text-slate-700">{parseDate(item.expiry)}</div></div>
+                                </div>
+                                ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">证件类型 (FOID Type)</label><div className="font-semibold text-lg text-slate-800">{item.foidType === 'PP' ? '护照 (PP)' : item.foidType === 'NI' ? '身份证 (NI)' : item.foidType}</div></div>
+                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">证件号码 (Number)</label><div className="font-mono text-slate-700 bg-slate-100 inline-block px-2 rounded border border-slate-200">{item.number}</div></div>
+                                </div>
+                                )}
+                                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">系统转换指令 (System Commands)</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="group relative">
+                                    <label className="text-[10px] font-bold text-blue-500 mb-1 block">AMADEUS (1A)</label>
+                                    <div className="flex"><input readOnly value={generateAmadeusString(item)} className="w-full bg-white text-xs font-mono border border-slate-300 rounded-l-md px-3 py-2 text-slate-600 focus:outline-none" /><button onClick={() => copyToClipboard(generateAmadeusString(item))} className="bg-white border border-l-0 border-slate-300 hover:bg-blue-50 hover:text-blue-600 px-3 rounded-r-md transition-colors"><Clipboard className="w-4 h-4" /></button></div>
+                                    </div>
+                                    <div className="group relative">
+                                    <label className="text-[10px] font-bold text-red-500 mb-1 block">SABRE (1S)</label>
+                                    <div className="flex"><input readOnly value={generateSabreString(item)} className="w-full bg-white text-xs font-mono border border-slate-300 rounded-l-md px-3 py-2 text-slate-600 focus:outline-none" /><button onClick={() => copyToClipboard(generateSabreString(item))} className="bg-white border border-l-0 border-slate-300 hover:bg-red-50 hover:text-red-600 px-3 rounded-r-md transition-colors"><Clipboard className="w-4 h-4" /></button></div>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+                            </div>
+                        ))}
+                        </div>
+                    </section>
+                    )}
+
+                    {/* Flight Results */}
+                    {activeTab === 'flight' && flightResults.length > 0 && (
+                    <section className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center"><MapPin className="w-5 h-5 mr-2 text-blue-600" /> 解析结果 ({flightResults.length})</h3>
+                            <button onClick={() => copyToClipboard(flightResults.map(f => f.formatted).join('\n'))} className="text-sm text-blue-600 hover:text-blue-700 font-medium">复制全部结果</button>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            {flightResults.map((flight, idx) => (
+                                <div key={idx} className="p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors flex justify-between items-center group">
+                                    <div className="font-mono text-sm text-slate-800">{flight.formatted}</div>
+                                    <button onClick={() => copyToClipboard(flight.formatted)} className="text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"><Clipboard className="w-4 h-4" /></button>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                    )}
+
+                    {results.length === 0 && flightResults.length === 0 && (
+                    <div className="text-center py-12 px-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                        <div className="max-w-md mx-auto">
+                        <h3 className="text-slate-400 font-semibold mb-2">如何使用</h3>
+                        <p className="text-slate-400 text-sm mb-6">
+                            {activeTab === 'docs' 
+                                ? '复制 PNR 中的 SSR DOCS 行，系统将自动生成对应指令。' 
+                                : '复制航班信息行（如 1 CA 848...），系统将自动翻译日期和机场。'}
+                        </p>
+                        </div>
+                    </div>
+                    )}
+
+                </div>
+                {toast.show && (
+                    <div className={`fixed bottom-6 right-6 px-6 py-3 rounded-lg shadow-xl text-white font-medium flex items-center animate-bounce-in transition-all z-50 ${toast.type === 'error' ? 'bg-red-600' : 'bg-slate-800'}`}>
+                    {toast.type === 'error' ? <AlertCircle className="w-5 h-5 mr-2" /> : <CheckCircle className="w-5 h-5 mr-2" />}
+                    {toast.message}
+                    </div>
+                )}
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
