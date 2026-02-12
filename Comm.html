@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Commission Quick Viewer v3.2 (B8BL Optimized)</title>
-    <!-- SheetJS CDN -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Commission Quick Viewer (GitHub Pages Edition)</title>
+    
+    <!-- Primary SheetJS CDN -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script>
-        // Fallback check
+        // Fallback to secondary CDN for GitHub Pages reliability
         if (typeof XLSX === 'undefined') {
-            console.warn('SheetJS not loaded from CDN. Ensure internet connection or local library.');
+            console.warn('Primary SheetJS CDN failed. Loading from fallback CDN...');
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
         }
     </script>
+    
     <style>
-        /* CSS from style.css */
         :root {
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
@@ -80,8 +82,8 @@
 
         .advanced-details { flex: 1; }
         .advanced-details summary { cursor: pointer; font-size: 0.85rem; color: var(--primary); font-weight: 500; user-select: none; }
-        .advanced-filters { display: flex; gap: 1rem; margin-top: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; }
-        .advanced-filters input { flex: 1; padding: 0.4rem; font-size: 0.85rem; }
+        .advanced-filters { display: flex; gap: 1rem; margin-top: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; flex-wrap: wrap; }
+        .advanced-filters input { flex: 1; min-width: 120px; padding: 0.4rem; font-size: 0.85rem; }
 
         .toggle-group { display: flex; align-items: center; gap: 1.5rem; }
         .switch-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; user-select: none; }
@@ -96,6 +98,10 @@
         .btn-outline { background: transparent; border: 1px solid #4b5563; color: var(--text-sidebar); }
         .btn-outline:hover { border-color: var(--white); color: var(--white); }
         .btn-lg { height: 42px; padding: 0 1.5rem; }
+        
+        /* High-contrast Details button */
+        .btn-detail-hl { background-color: #fff7ed; color: #ea580c; border: 1px solid #fbd38d; font-weight: 800; box-shadow: 0 1px 2px rgba(234, 88, 12, 0.1); }
+        .btn-detail-hl:hover { background-color: #fef3c7; border-color: #f59e0b; color: #b45309; }
 
         /* Results */
         .results-info { padding: 0.5rem 1.5rem; background: #eefff6; color: #065f46; font-size: 0.85rem; border-bottom: 1px solid #d1fae5; }
@@ -109,7 +115,7 @@
         .card-dates { font-size: 0.75rem; color: var(--text-sub); text-align: right; background: #f9fafb; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
 
         .card-body { padding: 1rem; flex: 1; font-size: 0.9rem; }
-        .data-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: baseline; }
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: baseline; gap: 1rem; }
         .data-label { color: var(--text-sub); font-size: 0.8rem; flex: 1; }
         .data-value { font-weight: 500; text-align: right; flex: 2; word-break: break-word; }
         .value-highlight { color: var(--primary); font-weight: 600; }
@@ -123,18 +129,18 @@
         .card-footer .btn { flex: 1; }
 
         /* Slide Panel */
-        .slide-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 800px; background: var(--white); box-shadow: -10px 0 25px rgba(0,0,0,0.15); transform: translateX(0); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 100; display: flex; flex-direction: column; }
-        .slide-panel.wide { width: 900px; }
-        .slide-panel.hidden { transform: translateX(100%); }
+        .slide-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 100%; max-width: 600px; background: var(--white); box-shadow: -10px 0 25px rgba(0,0,0,0.15); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 100; display: flex; flex-direction: column; }
+        .slide-panel.wide { max-width: 900px; }
+        .slide-panel.open { transform: translateX(0); }
         .panel-header { padding: 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f9fafb; }
         .panel-header h2 { margin: 0; font-size: 1.25rem; }
-        .btn-close { background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--text-sub); line-height: 1; }
+        .btn-close { background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--text-sub); line-height: 1; padding: 0.5rem; }
         .panel-content { padding: 1.5rem; overflow-y: auto; flex: 1; }
 
         /* Detail Tables - Optimized */
-        .detail-section { margin-bottom: 2rem; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+        .detail-section { margin-bottom: 2rem; border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; }
         .section-title { background: #f3f4f6; padding: 0.75rem 1rem; margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main); border-bottom: 1px solid var(--border); display:flex; justify-content: space-between; align-items: center; }
-        .info-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .info-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 500px; }
         .info-table th { background: #f9fafb; text-align: left; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-sub); white-space: nowrap; }
         .info-table td { padding: 0.6rem 1rem; border-bottom: 1px solid #e5e7eb; color: var(--text-main); vertical-align: top; }
         .info-table tr:last-child td { border-bottom: none; }
@@ -150,8 +156,8 @@
         .status-text { font-size: 0.8rem; color: var(--success); }
 
         /* Canvas */
-        .canvas-wrapper { border: 1px solid #e5e7eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1.5rem; padding: 1rem; background: #555; display: flex; justify-content: center; }
-        #previewCanvas { max-width: 100%; background: white; }
+        .canvas-wrapper { border: 1px solid #e5e7eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1.5rem; padding: 1rem; background: #555; display: flex; justify-content: center; overflow-x: auto; }
+        #previewCanvas { max-width: 100%; height: auto; background: white; min-width: 600px; }
         .text-summary-wrapper { width: 100%; margin-top: 1rem; }
         .text-summary { font-family: monospace; white-space: pre-wrap; background: #f9fafb; padding: 1rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; line-height: 1.5; color: #374151; }
 
@@ -160,17 +166,37 @@
         .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
 
         /* Overlay */
-        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 50; backdrop-filter: blur(2px); }
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 50; backdrop-filter: blur(2px); display: none; }
+        .overlay.open { display: block; }
 
         /* Modal */
-        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 200; display: flex; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 2rem; border-radius: 8px; max-width: 700px; width: 90%; max-height: 85vh; overflow-y: auto; position: relative; }
-        .close-modal { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; }
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 200; display: none; justify-content: center; align-items: center; padding: 1rem; }
+        .modal.open { display: flex; }
+        .modal-content { background: white; padding: 2rem; border-radius: 8px; max-width: 700px; width: 100%; max-height: 85vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; padding: 0.5rem; }
         .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
         .tc-item { background: #f3f4f6; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem; }
         .tc-code { font-weight: bold; color: var(--primary); }
 
         .hidden { display: none !important; }
+
+        /* Responsive / Mobile Adjustments */
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #374151; padding: 1rem; max-height: 250px; }
+            .brand { margin-bottom: 1rem; }
+            .pcc-list { max-height: 80px; }
+            .sidebar-section { margin-bottom: 1rem; }
+            .sidebar-section.bottom { display: flex; align-items: center; justify-content: space-between; padding-top: 0.5rem; }
+            .app-version { margin-top: 0; }
+            
+            .search-row.primary { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+            .search-row.secondary { flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-top: 0.5rem; }
+            .input-group.action .btn { width: 100%; }
+            .toggle-group { width: 100%; justify-content: space-between; }
+            .dual-input { grid-template-columns: 1fr; }
+            .slide-panel { width: 100%; max-width: none; }
+        }
     </style>
 </head>
 <body>
@@ -179,7 +205,7 @@
         <aside class="sidebar">
             <div class="brand">
                 <h2>Commission v3.2</h2>
-                <span class="badge">Offline</span>
+                <span class="badge">GH Pages</span>
             </div>
             
             <div class="sidebar-section">
@@ -199,12 +225,11 @@
             </div>
 
             <div class="sidebar-section bottom">
-                <h3>Data Management</h3>
                 <div class="btn-group" style="display:flex; gap:0.5rem;">
-                    <button id="btnExportData" class="btn btn-sm btn-outline" style="flex:1;">Export</button>
-                    <button id="btnImportData" class="btn btn-sm btn-outline" style="flex:1;">Import</button>
+                    <button id="btnExportData" class="btn btn-sm btn-outline">Export</button>
+                    <button id="btnImportData" class="btn btn-sm btn-outline">Import</button>
                 </div>
-                <div class="app-version">v3.2.0 B8BL Optimized</div>
+                <div class="app-version">Static Web App</div>
             </div>
         </aside>
 
@@ -269,7 +294,7 @@
         </main>
 
         <!-- Slide Panel: Airline Details -->
-        <div id="detailPanel" class="slide-panel hidden">
+        <div id="detailPanel" class="slide-panel">
             <div class="panel-header">
                 <h2 id="panelTitle">Airline Details</h2>
                 <button class="btn-close" onclick="closePanel('detailPanel')">&times;</button>
@@ -293,7 +318,7 @@
         </div>
 
         <!-- Slide Panel: Canvas -->
-        <div id="canvasPanel" class="slide-panel hidden wide">
+        <div id="canvasPanel" class="slide-panel wide">
             <div class="panel-header">
                 <h2>Commission Checklist / 核对单</h2>
                 <button class="btn-close" onclick="closePanel('canvasPanel')">&times;</button>
@@ -303,7 +328,7 @@
                     <canvas id="previewCanvas"></canvas>
                 </div>
                 <div class="action-bar" style="text-align:center;">
-                    <button id="btnDownloadCanvas" class="btn btn-primary">Download Image</button>
+                    <button id="btnDownloadCanvas" class="btn btn-primary">Download Image / 下载图片</button>
                 </div>
                 <div class="text-summary-wrapper">
                     <h4>Text Summary (Copyable)</h4>
@@ -313,7 +338,7 @@
         </div>
         
         <!-- Modal: TC Definitions -->
-        <div id="tcModal" class="modal hidden">
+        <div id="tcModal" class="modal">
             <div class="modal-content">
                 <span class="close-modal" onclick="closeModal('tcModal')">&times;</span>
                 <h3>IATA TC Definitions / 区域说明</h3>
@@ -322,11 +347,11 @@
         </div>
 
         <!-- Overlay -->
-        <div id="overlay" class="overlay hidden" onclick="closeAllPanels()"></div>
+        <div id="overlay" class="overlay" onclick="closeAllPanels()"></div>
     </div>
 
     <!-- MAIN LOGIC -->
-    <script type="module">
+    <script>
         /*******************************************************
          * 1. DATA & CONSTANTS
          *******************************************************/
@@ -711,6 +736,49 @@
             });
         }
 
+        // Helper: Enrich Master Data with exact Sheet Names based on Summary Table mapping
+        function enrichMasterData(master, summary) {
+            if (!summary || !summary.length) return;
+            master.forEach(row => {
+                if (row._sheetName) return; // already enriched
+                const vCarrier = (row['Validating Carrier'] || row['Airline Code'] || '').trim().toUpperCase();
+                const tCode = (row['Tour Code'] || '').trim().toUpperCase();
+                const tDesig = (row['Ticket Designator'] || '').trim().toUpperCase();
+
+                let bestMatch = null;
+                let maxScore = -1;
+
+                summary.forEach(s => {
+                    const sCarrier = (s['Airline Code'] || s['Validating Carrier'] || '').trim().toUpperCase();
+                    const sTour = (s['Tour Code'] || '').trim().toUpperCase();
+                    const sDesig = (s['Ticket Designator'] || '').trim().toUpperCase();
+
+                    // If carrier is specified but doesn't match, reject instantly
+                    if (sCarrier && vCarrier && sCarrier !== vCarrier && !sCarrier.includes(vCarrier) && !vCarrier.includes(sCarrier)) return;
+
+                    let score = 0;
+                    if (sCarrier === vCarrier) score += 10;
+                    
+                    // Match Tour Code
+                    if (tCode && sTour === tCode) score += 5;
+                    else if (sTour && sTour !== '-' && sTour !== 'AS PER GDS' && sTour !== tCode) score -= 20;
+                    
+                    // Match Ticket Designator
+                    if (tDesig && sDesig === tDesig) score += 5;
+                    else if (sDesig && sDesig !== '-' && sDesig !== 'AS PER GDS' && sDesig !== tDesig) score -= 20;
+
+                    if (score > maxScore && score >= 0) {
+                        maxScore = score;
+                        bestMatch = s;
+                    }
+                });
+
+                if (bestMatch && bestMatch['Sheet Name']) {
+                    row._sheetName = bestMatch['Sheet Name'].trim();
+                }
+            });
+        }
+
         /*******************************************************
          * 4. SEARCH & TC LOGIC
          *******************************************************/
@@ -722,17 +790,19 @@
                             const q = filters.airline.toUpperCase().trim();
                             const rowAl = (row['Airline'] || '').toUpperCase();
                             const rowCode = (row['Validating Carrier'] || '').toUpperCase();
+                            const rowSheet = (row._sheetName || '').toUpperCase();
                             
                             let match = false;
                             
                             // 1. Direct match (Code in Validating Carrier OR Name/Code in Airline col)
                             if (rowCode && rowCode.includes(q)) match = true;
                             if (rowAl.includes(q)) match = true;
+                            if (rowSheet.includes(q)) match = true;
                             
                             // 2. Map Match (Dynamic from Summary)
                             if (!match && airlineMap && airlineMap[q]) {
                                 const mappedName = airlineMap[q].toUpperCase();
-                                if (rowAl.includes(mappedName) || mappedName.includes(rowAl)) match = true;
+                                if (rowAl.includes(mappedName) || mappedName.includes(rowAl) || rowSheet.includes(mappedName)) match = true;
                             }
 
                             // 3. Static Map Match (Robust Fallback)
@@ -742,7 +812,7 @@
                                 // or if "UNITED AIRLINES美联航" contains row Airline
                                 if (staticName.includes(rowAl) || rowAl.includes(staticName)) match = true;
                                 
-                                // Also split static name by chinese characters to get English part only?
+                                // Also split static name by chinese characters to get English part only
                                 // Simple heuristic: match first part of static name
                                 const engPart = staticName.split(/[\u4e00-\u9fa5]/)[0]; // Split by chinese
                                 if (engPart && rowAl.includes(engPart.trim())) match = true;
@@ -859,8 +929,15 @@
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 24px Arial';
             ctx.textAlign = 'center';
-            const airlineDisplay = item['Validating Carrier'] ? `${item['Validating Carrier']} - ${item.Airline}` : item.Airline;
-            ctx.fillText(airlineDisplay.substring(0, 15), 655, 58);
+            
+            // Highlight: Use Sheet Name for Canvas if available
+            let airlineDisplay = item._sheetName || item.Airline;
+            if (!item._sheetName && item['Validating Carrier']) {
+                const mapName = state.airlineCodeMap[item['Validating Carrier']] || item.Airline;
+                airlineDisplay = `${item['Validating Carrier']} - ${mapName}`;
+            }
+            
+            ctx.fillText(airlineDisplay.substring(0, 20), 655, 58);
             ctx.textAlign = 'left';
 
             let y = 150;
@@ -946,15 +1023,15 @@
         };
 
         window.closePanel = (id) => {
-            document.getElementById(id).classList.add('hidden');
-            document.getElementById('overlay').classList.add('hidden');
+            document.getElementById(id).classList.remove('open');
+            document.getElementById('overlay').classList.remove('open');
         };
         window.closeModal = (id) => {
-            document.getElementById(id).classList.add('hidden');
+            document.getElementById(id).classList.remove('open');
         };
         window.closeAllPanels = () => {
-            document.querySelectorAll('.slide-panel').forEach(el => el.classList.add('hidden'));
-            document.getElementById('overlay').classList.add('hidden');
+            document.querySelectorAll('.slide-panel').forEach(el => el.classList.remove('open'));
+            document.getElementById('overlay').classList.remove('open');
         };
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1061,6 +1138,9 @@
                      });
                 }
                 
+                // 3. Map Sheet Names to Master Data rows
+                enrichMasterData(state.masterData, state.summaryData);
+                
                 console.log(`Switched to ${id}. Loaded ${state.masterData.length} rows. Code Map size: ${Object.keys(state.airlineCodeMap).length}`);
                 
                 if (document.getElementById('inpAirline').value) {
@@ -1154,6 +1234,7 @@
                         // Merge static map
                         for (const [c, n] of Object.entries(AIRLINE_CN_MAP)) localMap[c] = n;
                         
+                        enrichMasterData(fullData.master, fullData.summary);
                         const subRes = await searchRules(fullData.master, filters, localMap);
                         results.push(...subRes.map(r => ({ ...r, _pcc: dsMeta.id })));
                     }
@@ -1185,17 +1266,13 @@
                 if (commDisplay !== '0%' && !commDisplay.includes('%')) commDisplay = '$' + commDisplay;
                 
                 // Show Validating Carrier if available, else try to derive from Name using map
-                let airlineDisplay = item.Airline;
+                // Highlight: Priority given to _sheetName mapped from summary
+                let airlineDisplay = item._sheetName || item.Airline;
                 const valCarrier = item['Validating Carrier'];
                 
-                if (valCarrier) {
-                    // Try to look up nice name from map
+                if (!item._sheetName && valCarrier) {
                     const mapName = state.airlineCodeMap[valCarrier] || item.Airline;
                     airlineDisplay = `${valCarrier} - ${mapName}`;
-                } else {
-                    // Reverse Lookup for display? 
-                    // e.g. "United Airlines" -> Find "UA" in map? Too expensive for list render.
-                    // Just display Name as is for now.
                 }
 
                 card.innerHTML = `
@@ -1229,14 +1306,14 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button class="btn btn-sm btn-outline btn-detail">Details</button>
+                        <button class="btn btn-sm btn-detail-hl btn-detail">Details / 详情</button>
                         <button class="btn btn-sm btn-primary btn-canvas">Checklist</button>
                     </div>
                 `;
                 card.querySelector('.btn-detail').onclick = () => openDetailPanel(item);
                 card.querySelector('.btn-canvas').onclick = () => {
-                    document.getElementById('canvasPanel').classList.remove('hidden');
-                    els.overlay.classList.remove('hidden');
+                    document.getElementById('canvasPanel').classList.add('open');
+                    els.overlay.classList.add('open');
                     renderCanvas(item, 'previewCanvas', 'textSummary');
                 };
                 els.resultsArea.appendChild(card);
@@ -1258,8 +1335,8 @@
             const valCarrier = item['Validating Carrier'] || '';
             
             // Construct nice title
-            let displayTitle = airline;
-            if (valCarrier && state.airlineCodeMap[valCarrier]) {
+            let displayTitle = item._sheetName || airline;
+            if (!item._sheetName && valCarrier && state.airlineCodeMap[valCarrier]) {
                 displayTitle = `${valCarrier} - ${state.airlineCodeMap[valCarrier]}`;
             }
             
@@ -1274,8 +1351,8 @@
 
             const body = document.getElementById('panelBody');
             body.innerHTML = '<p style="padding:1rem; color:#666;">Loading detail sheet...</p>';
-            document.getElementById('detailPanel').classList.remove('hidden');
-            els.overlay.classList.remove('hidden');
+            document.getElementById('detailPanel').classList.add('open');
+            els.overlay.classList.add('open');
 
             let targetDetailsMap = state.detailsMap;
             if (pcc !== state.currentPCC) {
@@ -1286,20 +1363,22 @@
             const keys = Object.keys(targetDetailsMap);
             let sheetName = null;
             
-            // 1. Try match by Validating Carrier Code
-            if (valCarrier) {
+            // 1. Direct Match with enriched _sheetName
+            if (item._sheetName && targetDetailsMap[item._sheetName]) {
+                sheetName = item._sheetName;
+            } else if (item._sheetName) {
+                sheetName = keys.find(k => k.trim() === item._sheetName.trim());
+            }
+
+            // 2. Try match by Validating Carrier Code
+            if (!sheetName && valCarrier) {
                 sheetName = keys.find(k => k.startsWith(valCarrier + ' ')); 
                 if(!sheetName) sheetName = keys.find(k => k.startsWith(valCarrier + '-'));
             }
             
-            // 2. Try match by Airline Name or Tour Code (Advanced Heuristic)
+            // 3. Try match by Airline Name
             if (!sheetName) {
                 sheetName = keys.find(k => k.includes(airline));
-            }
-            // 3. Try match by mapped Code if we have it
-            if (!sheetName) {
-                // Find code from map? 
-                // Too complex for inverse map, assume Name match is sufficient
             }
 
             if (sheetName) {
@@ -1318,12 +1397,12 @@
         }
 
         function renderMasterRecordTable(item) {
-            let html = '<div class="detail-section"><h5 class="section-title">Master Record</h5><table class="info-table"><tbody>';
+            let html = '<div class="detail-section"><h5 class="section-title">Master Record</h5><div style="overflow-x:auto;"><table class="info-table"><tbody>';
             for (const [k, v] of Object.entries(item)) {
                 if (k.startsWith('_')) continue;
                 html += `<tr><th>${k}</th><td>${v}</td></tr>`;
             }
-            html += '</tbody></table></div>';
+            html += '</tbody></table></div></div>';
             return html;
         }
 
@@ -1378,7 +1457,7 @@
 
         function arrayToTable(rows) {
             if (!rows.length) return '';
-            let html = '<table class="info-table">';
+            let html = '<div style="overflow-x:auto;"><table class="info-table">';
             
             let headers = [];
             if (Array.isArray(rows[0])) {
@@ -1400,7 +1479,7 @@
                 }
                 html += '</tr>';
             }
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             return html;
         }
 
@@ -1417,7 +1496,7 @@
         function showTcModal() {
             const grid = document.getElementById('tcContent');
             grid.innerHTML = getTcDefinitionHtml();
-            document.getElementById('tcModal').classList.remove('hidden');
+            document.getElementById('tcModal').classList.add('open');
         }
 
         async function handleExport() {
