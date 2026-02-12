@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commission Quick Viewer (GitHub Pages Edition)</title>
+    <title>Commission Quick Viewer (B8BL Optimized)</title>
     
     <!-- Primary SheetJS CDN -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -99,19 +99,37 @@
         .btn-outline:hover { border-color: var(--white); color: var(--white); }
         .btn-lg { height: 42px; padding: 0 1.5rem; }
         
-        /* High-contrast Details button */
-        .btn-detail-hl { background-color: #fff7ed; color: #ea580c; border: 1px solid #fbd38d; font-weight: 800; box-shadow: 0 1px 2px rgba(234, 88, 12, 0.1); }
-        .btn-detail-hl:hover { background-color: #fef3c7; border-color: #f59e0b; color: #b45309; }
+        /* High-contrast Details button (NEW DESIGN) */
+        .btn-detail-hl { 
+            background: linear-gradient(135deg, #f97316, #ea580c); 
+            color: #ffffff !important; 
+            font-weight: 800; 
+            font-size: 0.9rem;
+            border: none; 
+            box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.4), 0 2px 4px -1px rgba(234, 88, 12, 0.2);
+            transition: all 0.2s ease-in-out;
+            padding: 0.45rem 1.2rem;
+            letter-spacing: 0.02em;
+        }
+        .btn-detail-hl:hover { 
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(234, 88, 12, 0.5), 0 4px 6px -1px rgba(234, 88, 12, 0.3);
+        }
+        .btn-detail-hl:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px -1px rgba(234, 88, 12, 0.4);
+        }
 
         /* Results */
         .results-info { padding: 0.5rem 1.5rem; background: #eefff6; color: #065f46; font-size: 0.85rem; border-bottom: 1px solid #d1fae5; }
         .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; align-content: start; }
 
         .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
-        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
         .card-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border-radius: 8px 8px 0 0; }
-        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.2; }
-        .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: normal; margin-left: 6px; }
+        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.3; display: block; }
+        .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: normal; margin-top: 4px; display: inline-block; }
         .card-dates { font-size: 0.75rem; color: var(--text-sub); text-align: right; background: #f9fafb; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
 
         .card-body { padding: 1rem; flex: 1; font-size: 0.9rem; }
@@ -125,7 +143,7 @@
         .comm-label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); text-transform: uppercase; }
         .comm-value { font-size: 1.4rem; font-weight: 800; color: var(--success); }
 
-        .card-footer { padding: 0.75rem 1rem; background: #f9fafb; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; display: flex; gap: 0.75rem; }
+        .card-footer { padding: 0.75rem 1rem; background: #f9fafb; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; display: flex; gap: 0.75rem; align-items: center; }
         .card-footer .btn { flex: 1; }
 
         /* Slide Panel */
@@ -204,7 +222,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
-                <h2>Commission v3.2</h2>
+                <h2>Commission v3.3</h2>
                 <span class="badge">GH Pages</span>
             </div>
             
@@ -229,7 +247,7 @@
                     <button id="btnExportData" class="btn btn-sm btn-outline">Export</button>
                     <button id="btnImportData" class="btn btn-sm btn-outline">Import</button>
                 </div>
-                <div class="app-version">Static Web App</div>
+                <div class="app-version">Smart Search Build</div>
             </div>
         </aside>
 
@@ -239,8 +257,8 @@
             <header class="search-header">
                 <div class="search-row primary">
                     <div class="input-group flex-2">
-                        <label>Airline (Code/Name) / 航司</label>
-                        <input type="text" id="inpAirline" placeholder="e.g. AC, UA or Air Canada">
+                        <label>Airline (Code/Name) / 航司二字代码</label>
+                        <input type="text" id="inpAirline" placeholder="e.g. CA, UA, Air China">
                     </div>
                     <div class="input-group flex-1">
                         <label>Origin / 始发 <span class="hint">(City, Country, TC)</span></label>
@@ -624,7 +642,7 @@
         }
 
         /*******************************************************
-         * 3. PARSER LOGIC (parser.js)
+         * 3. PARSER & MAPPING LOGIC (parser.js)
          *******************************************************/
         function parseExcelFile(file) {
             return new Promise((resolve, reject) => {
@@ -653,9 +671,7 @@
                             const snLower = sheetName.toLowerCase();
 
                             if (snLower.includes('master')) {
-                                // Try Strict First (B7XL style)
                                 let data = findAndParseTable(ws, ['Validating Carrier', 'Airline', 'Origin', 'Commission']);
-                                // Fallback for B8BL (No Validating Carrier col)
                                 if (!data.length) {
                                     data = findAndParseTable(ws, ['Airline', 'Origin', 'Commission']);
                                 }
@@ -672,7 +688,7 @@
                             }
                         });
 
-                        // Fallback: search for Master in all sheets if not named 'master'
+                        // Fallback Master logic
                         if (result.master.length === 0) {
                             for (const name of workbook.SheetNames) {
                                 const ws = workbook.Sheets[name];
@@ -687,6 +703,7 @@
                         if (result.master.length === 0) {
                             reject(new Error("Invalid Excel: Could not find 'Master' sheet."));
                         } else {
+                            enrichMasterData(result.master, result.summary); // Enhance master records immediately
                             resolve(result);
                         }
                     } catch (err) {
@@ -711,8 +728,6 @@
                     if (cell && cell.v) rowValues.push(String(cell.v).trim());
                 }
                 const rowStr = rowValues.join(' ').toLowerCase();
-                // Relaxed matching: check if *some* keywords are present if strict is false
-                // But for table identification we usually want all
                 const match = keywords.every(k => rowStr.includes(k.toLowerCase()));
                 if (match) {
                     headerRowIndex = R;
@@ -736,45 +751,80 @@
             });
         }
 
-        // Helper: Enrich Master Data with exact Sheet Names based on Summary Table mapping
+        // Extremely robust matching logic for Title mapping
         function enrichMasterData(master, summary) {
             if (!summary || !summary.length) return;
+            
             master.forEach(row => {
-                if (row._sheetName) return; // already enriched
-                const vCarrier = (row['Validating Carrier'] || row['Airline Code'] || '').trim().toUpperCase();
-                const tCode = (row['Tour Code'] || '').trim().toUpperCase();
-                const tDesig = (row['Ticket Designator'] || '').trim().toUpperCase();
+                if (row._sheetName) return; 
+                const mAirline = String(row['Airline'] || '').toUpperCase().trim();
+                const mTour = String(row['Tour Code'] || '').toUpperCase().trim();
+                const mDesig = String(row['Ticket Designator'] || '').toUpperCase().trim();
 
                 let bestMatch = null;
                 let maxScore = -1;
 
                 summary.forEach(s => {
-                    const sCarrier = (s['Airline Code'] || s['Validating Carrier'] || '').trim().toUpperCase();
-                    const sTour = (s['Tour Code'] || '').trim().toUpperCase();
-                    const sDesig = (s['Ticket Designator'] || '').trim().toUpperCase();
+                    const sCode = String(s['Airline Code'] || '').toUpperCase().trim();
+                    const sName = String(s['Contract Name'] || '').toUpperCase().trim();
+                    const sSheet = String(s['Sheet Name'] || '').toUpperCase().trim();
+                    const sTour = String(s['Tour Code'] || '').toUpperCase().trim();
+                    const sDesig = String(s['Ticket Designator'] || '').toUpperCase().trim();
 
-                    // If carrier is specified but doesn't match, reject instantly
-                    if (sCarrier && vCarrier && sCarrier !== vCarrier && !sCarrier.includes(vCarrier) && !vCarrier.includes(sCarrier)) return;
+                    if (!sSheet) return;
 
                     let score = 0;
-                    if (sCarrier === vCarrier) score += 10;
-                    
-                    // Match Tour Code
-                    if (tCode && sTour === tCode) score += 5;
-                    else if (sTour && sTour !== '-' && sTour !== 'AS PER GDS' && sTour !== tCode) score -= 20;
-                    
-                    // Match Ticket Designator
-                    if (tDesig && sDesig === tDesig) score += 5;
-                    else if (sDesig && sDesig !== '-' && sDesig !== 'AS PER GDS' && sDesig !== tDesig) score -= 20;
 
-                    if (score > maxScore && score >= 0) {
+                    // 1. Initial Identity Match
+                    if (sSheet.includes(mAirline) || mAirline.includes(sCode)) {
+                        score += 10;
+                    } else if (sName && mAirline && (sName.includes(mAirline) || mAirline.includes(sName))) {
+                        score += 5;
+                    } else {
+                        // Attempt static dict cross-match
+                        let staticMatch = false;
+                        for (const [c, n] of Object.entries(AIRLINE_CN_MAP)) {
+                            if (c === sCode && n.toUpperCase().includes(mAirline)) {
+                                staticMatch = true;
+                                break;
+                            }
+                        }
+                        if (!staticMatch) return; 
+                        score += 5;
+                    }
+
+                    // 2. Strict Match: Tour Code
+                    if (mTour && sTour) {
+                        if (sTour === mTour || sTour.includes(mTour) || mTour.includes(sTour)) score += 50;
+                        else score -= 50; // Heavy penalty if both exist but differ
+                    } else if (mTour || sTour) {
+                        score -= 5; 
+                    }
+
+                    // 3. Strict Match: Ticket Designator
+                    if (mDesig && sDesig) {
+                        if (sDesig === mDesig || sDesig.includes(mDesig) || mDesig.includes(sDesig)) score += 50;
+                        else score -= 50;
+                    } else if (mDesig || sDesig) {
+                        score -= 5;
+                    }
+
+                    if (score > maxScore) {
                         maxScore = score;
                         bestMatch = s;
                     }
                 });
 
-                if (bestMatch && bestMatch['Sheet Name']) {
+                if (bestMatch && maxScore > 0) {
                     row._sheetName = bestMatch['Sheet Name'].trim();
+                    row._airlineCode = bestMatch['Airline Code'].trim();
+                } else {
+                    // Fallback to simple name inclusion
+                    const fallback = summary.find(s => String(s['Sheet Name'] || '').toUpperCase().includes(mAirline));
+                    if (fallback) {
+                        row._sheetName = fallback['Sheet Name'].trim();
+                        row._airlineCode = fallback['Airline Code'].trim();
+                    }
                 }
             });
         }
@@ -789,37 +839,44 @@
                         if (filters.airline) {
                             const q = filters.airline.toUpperCase().trim();
                             const rowAl = (row['Airline'] || '').toUpperCase();
-                            const rowCode = (row['Validating Carrier'] || '').toUpperCase();
+                            const rowCode = (row._airlineCode || row['Validating Carrier'] || '').toUpperCase();
                             const rowSheet = (row._sheetName || '').toUpperCase();
                             
                             let match = false;
                             
-                            // 1. Direct match (Code in Validating Carrier OR Name/Code in Airline col)
-                            if (rowCode && rowCode.includes(q)) match = true;
-                            if (rowAl.includes(q)) match = true;
-                            if (rowSheet.includes(q)) match = true;
+                            // 1. Precise Code Match (Typed "UA", and row belongs to UA)
+                            if (rowCode === q) match = true;
+                            else if (rowCode.includes(q)) match = true;
                             
-                            // 2. Map Match (Dynamic from Summary)
-                            if (!match && airlineMap && airlineMap[q]) {
+                            // 2. Name / Sheet Match
+                            else if (rowSheet.includes(q)) match = true;
+                            else if (rowAl.includes(q)) match = true;
+                            
+                            // 3. Dynamic Map Match
+                            else if (airlineMap[q]) {
                                 const mappedName = airlineMap[q].toUpperCase();
                                 if (rowAl.includes(mappedName) || mappedName.includes(rowAl) || rowSheet.includes(mappedName)) match = true;
                             }
 
-                            // 3. Static Map Match (Robust Fallback)
-                            if (!match && AIRLINE_CN_MAP[q]) {
-                                const staticName = AIRLINE_CN_MAP[q].toUpperCase();
-                                // Check if row Airline (e.g. "UNITED AIRLINES") is inside "UNITED AIRLINES美联航"
-                                // or if "UNITED AIRLINES美联航" contains row Airline
-                                if (staticName.includes(rowAl) || rowAl.includes(staticName)) match = true;
-                                
-                                // Also split static name by chinese characters to get English part only
-                                // Simple heuristic: match first part of static name
-                                const engPart = staticName.split(/[\u4e00-\u9fa5]/)[0]; // Split by chinese
-                                if (engPart && rowAl.includes(engPart.trim())) match = true;
+                            // 4. Reverse / Static Map Match (Robust Fallback)
+                            else {
+                                // If they typed "UNITED", find it in map and compare
+                                for (const [code, name] of Object.entries(AIRLINE_CN_MAP)) {
+                                    const staticName = name.toUpperCase();
+                                    if (staticName.includes(q) && (rowCode === code || rowSheet.includes(code) || rowAl.includes(staticName.split(/[\u4e00-\u9fa5]/)[0].trim()))) {
+                                        match = true;
+                                        break;
+                                    }
+                                    if (q === code && (rowAl.includes(staticName) || rowSheet.includes(staticName))) {
+                                        match = true;
+                                        break;
+                                    }
+                                }
                             }
                             
                             if (!match) return false; 
                         }
+                        
                         if (filters.date) {
                             const searchDate = new Date(filters.date);
                             const validFrom = parseExcelDate(row['First Ticketing Date']);
@@ -847,6 +904,18 @@
                         if (filters.fareClass && !checkContains(row['Fare Class'], filters.fareClass)) return false;
                         return true;
                     });
+                    
+                    // Sort to put exact code matches at top if searching by code
+                    if (filters.airline && filters.airline.length <= 3) {
+                        const q = filters.airline.toUpperCase().trim();
+                        results.sort((a, b) => {
+                            const aCode = (a._airlineCode || a['Validating Carrier'] || '').toUpperCase();
+                            const bCode = (b._airlineCode || b['Validating Carrier'] || '').toUpperCase();
+                            if (aCode === q && bCode !== q) return -1;
+                            if (bCode === q && aCode !== q) return 1;
+                            return 0;
+                        });
+                    }
                     resolve(results);
                 }, 0);
             });
@@ -930,7 +999,7 @@
             ctx.font = 'bold 24px Arial';
             ctx.textAlign = 'center';
             
-            // Highlight: Use Sheet Name for Canvas if available
+            // Format: Sheet Name or Code + Airline
             let airlineDisplay = item._sheetName || item.Airline;
             if (!item._sheetName && item['Validating Carrier']) {
                 const mapName = state.airlineCodeMap[item['Validating Carrier']] || item.Airline;
@@ -1007,7 +1076,7 @@
             masterData: [],
             summaryData: [],
             detailsMap: {},
-            airlineCodeMap: {}, // Code -> Name
+            airlineCodeMap: {}, 
             searchFilters: {}
         };
 
@@ -1114,20 +1183,15 @@
                 
                 // Build Airline Code Map
                 state.airlineCodeMap = {};
-                
-                // 1. Pre-fill with Static CN Map (This ensures B8BL compatibility right away)
                 for (const [code, name] of Object.entries(AIRLINE_CN_MAP)) {
                      state.airlineCodeMap[code] = name;
                 }
                 
-                // 2. Supplement from Summary (for any codes not in static map)
                 if (state.summaryData.length) {
                      state.summaryData.forEach(item => {
                          const code = item['Airline Code'];
                          if (!code) return;
                          const codeKey = code.toUpperCase().trim();
-                         
-                         // Try to get Name from 'Sheet Name' or 'Contract Name'
                          const sheetName = item['Sheet Name'] || '';
                          const match = sheetName.match(/^[A-Z0-9\/]+\s*-\s*(.+?)\s*\(/);
                          let name = match ? match[1] : (item['Contract Name'] || item['Airline Name']);
@@ -1138,10 +1202,9 @@
                      });
                 }
                 
-                // 3. Map Sheet Names to Master Data rows
                 enrichMasterData(state.masterData, state.summaryData);
                 
-                console.log(`Switched to ${id}. Loaded ${state.masterData.length} rows. Code Map size: ${Object.keys(state.airlineCodeMap).length}`);
+                console.log(`Switched to ${id}. Loaded ${state.masterData.length} rows.`);
                 
                 if (document.getElementById('inpAirline').value) {
                     handleSearch();
@@ -1224,14 +1287,12 @@
                     const fullData = await getPCCData(dsMeta.id);
                     if (fullData && fullData.master) {
                         let localMap = {};
-                        // Re-build simple map for this dataset
                         if (fullData.summary) {
                              fullData.summary.forEach(item => {
                                  const code = item['Airline Code'];
                                  if (code) localMap[code.toUpperCase().trim()] = item['Contract Name'];
                              });
                         }
-                        // Merge static map
                         for (const [c, n] of Object.entries(AIRLINE_CN_MAP)) localMap[c] = n;
                         
                         enrichMasterData(fullData.master, fullData.summary);
@@ -1265,21 +1326,18 @@
                 let commDisplay = commP ? `${commP}` : (commA ? `${commA}` : '0%');
                 if (commDisplay !== '0%' && !commDisplay.includes('%')) commDisplay = '$' + commDisplay;
                 
-                // Show Validating Carrier if available, else try to derive from Name using map
-                // Highlight: Priority given to _sheetName mapped from summary
+                // Use the exact Sheet Name from Summary as Title
                 let airlineDisplay = item._sheetName || item.Airline;
-                const valCarrier = item['Validating Carrier'];
-                
-                if (!item._sheetName && valCarrier) {
-                    const mapName = state.airlineCodeMap[valCarrier] || item.Airline;
-                    airlineDisplay = `${valCarrier} - ${mapName}`;
+                if (!item._sheetName && item['Validating Carrier']) {
+                    const mapName = state.airlineCodeMap[item['Validating Carrier']] || item.Airline;
+                    airlineDisplay = `${item['Validating Carrier']} - ${mapName}`;
                 }
 
                 card.innerHTML = `
                     <div class="card-header">
                         <div>
                             <span class="card-airline">${airlineDisplay}</span>
-                            <span class="card-pcc-tag">${item._pcc}</span>
+                            <span class="card-pcc-tag">${item._pcc} ${item._airlineCode ? ` | ${item._airlineCode}` : ''}</span>
                         </div>
                         <div class="card-dates">
                             Ticket By:<br>
@@ -1306,8 +1364,8 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button class="btn btn-sm btn-detail-hl btn-detail">Details / 详情</button>
-                        <button class="btn btn-sm btn-primary btn-canvas">Checklist</button>
+                        <button class="btn btn-detail-hl btn-detail">Details / 详情</button>
+                        <button class="btn btn-primary btn-canvas">Checklist</button>
                     </div>
                 `;
                 card.querySelector('.btn-detail').onclick = () => openDetailPanel(item);
@@ -1332,13 +1390,9 @@
         async function openDetailPanel(item) {
             const pcc = item._pcc;
             const airline = item.Airline;
-            const valCarrier = item['Validating Carrier'] || '';
             
-            // Construct nice title
+            // Title in Panel
             let displayTitle = item._sheetName || airline;
-            if (!item._sheetName && valCarrier && state.airlineCodeMap[valCarrier]) {
-                displayTitle = `${valCarrier} - ${state.airlineCodeMap[valCarrier]}`;
-            }
             
             document.getElementById('panelTitle').innerText = `${displayTitle} (${pcc})`;
             
@@ -1363,20 +1417,18 @@
             const keys = Object.keys(targetDetailsMap);
             let sheetName = null;
             
-            // 1. Direct Match with enriched _sheetName
+            // Match perfectly via _sheetName tag mapped earlier
             if (item._sheetName && targetDetailsMap[item._sheetName]) {
                 sheetName = item._sheetName;
             } else if (item._sheetName) {
                 sheetName = keys.find(k => k.trim() === item._sheetName.trim());
             }
 
-            // 2. Try match by Validating Carrier Code
-            if (!sheetName && valCarrier) {
-                sheetName = keys.find(k => k.startsWith(valCarrier + ' ')); 
-                if(!sheetName) sheetName = keys.find(k => k.startsWith(valCarrier + '-'));
+            // Fallbacks
+            if (!sheetName && item['Validating Carrier']) {
+                sheetName = keys.find(k => k.startsWith(item['Validating Carrier'] + ' ')); 
+                if(!sheetName) sheetName = keys.find(k => k.startsWith(item['Validating Carrier'] + '-'));
             }
-            
-            // 3. Try match by Airline Name
             if (!sheetName) {
                 sheetName = keys.find(k => k.includes(airline));
             }
@@ -1421,7 +1473,7 @@
                     sections.flights.push(row); 
                     return;
                 }
-                if (rowStr.includes('additional notes') || rowStr.includes('terms and conditions') || rowStr.includes('general rules')) {
+                if (rowStr.includes('additional notes') || rowStr.includes('terms and conditions') || rowStr.includes('general rules') || rowStr.includes('exceptions')) {
                     currentMode = 'notes';
                     return;
                 }
