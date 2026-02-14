@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Commission Quick Viewer v4.0 (Global Edition)</title>
+    
+    <!-- Primary SheetJS CDN -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script>
+        if (typeof XLSX === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+        }
+    </script>
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-app: #f3f4f6;
+            --bg-sidebar: #111827;
+            --text-sidebar: #e5e7eb;
+            --white: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --sidebar-width: 280px;
+            
+            /* H71D Specific Colors */
+            --hkg-tag: #7c3aed; /* Violet for HKG */
+            --soto-tag: #db2777; /* Pink for SOTO */
+            --fee-tag: #059669; /* Green for Fee */
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-app); color: var(--text-main); height: 100vh; overflow: hidden; }
+
+        .app-container { display: flex; height: 100%; width: 100%; position: relative; }
+
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-sidebar); display: flex; flex-direction: column; padding: 1.25rem; flex-shrink: 0; border-right: 1px solid #374151; }
+        .brand { margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; }
+        .brand h2 { margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--white); }
+        .badge { background: var(--success); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+        
+        .badge-type { font-size: 0.6rem; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
+        .badge-type.B8BL { background: #3b82f6; color: white; }
+        .badge-type.H71D { background: #8b5cf6; color: white; }
+
+        .sidebar-section { margin-bottom: 2rem; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .sidebar h3 { font-size: 0.8rem; text-transform: uppercase; color: #9ca3af; margin: 0; letter-spacing: 0.05em; }
+        .btn-icon { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 1.2rem; padding: 0; }
+        .btn-icon:hover { color: var(--white); }
+
+        .file-input-wrapper { margin-bottom: 1rem; }
+        .pcc-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        .pcc-item { padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; background: #1f2937; cursor: pointer; transition: all 0.2s; position: relative; border-left: 3px solid transparent; }
+        .pcc-item:hover { background: #374151; }
+        .pcc-item.active { background: #374151; border-left-color: var(--primary); }
+        .pcc-info { display: flex; justify-content: space-between; align-items: baseline; }
+        .pcc-name { font-weight: bold; font-size: 1rem; color: var(--white); }
+        .pcc-date { font-size: 0.75rem; color: #9ca3af; }
+        .pcc-stats { font-size: 0.75rem; color: #9ca3af; margin-top: 4px; display: flex; gap: 8px; }
+        .btn-delete-pcc { position: absolute; right: 8px; top: 8px; background: none; border: none; color: #6b7280; cursor: pointer; font-size: 1.1rem; padding: 0 4px; display: none; }
+        .pcc-item:hover .btn-delete-pcc { display: block; color: var(--danger); }
+
+        .sidebar-section.bottom { flex: 0; margin-bottom: 0; border-top: 1px solid #374151; padding-top: 1.5rem; }
+        .app-version { font-size: 0.7rem; color: #4b5563; text-align: center; margin-top: 1rem; }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: #f9fafb; }
+
+        /* Search Header */
+        .search-header { background: var(--white); padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10; }
+        .search-row { display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 0.75rem; }
+        .search-row.secondary { margin-bottom: 0; align-items: center; justify-content: space-between; }
+
+        .flex-1 { flex: 1; }
+        .flex-2 { flex: 2; }
+
+        .input-group label { display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-sub); text-transform: uppercase; }
+        .input-group input { width: 100%; padding: 0.6rem; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95rem; transition: border 0.2s; }
+        .input-group input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
+        .hint { font-weight: normal; color: #9ca3af; text-transform: none; }
+
+        /* B8BL Specific Filters (Hidden in H71D mode) */
+        .b8bl-only { display: contents; }
+        .h71d-only { display: none; }
+        
+        body.mode-h71d .b8bl-only { display: none; }
+        body.mode-h71d .h71d-only { display: block; width: 100%; }
+
+        .advanced-details { flex: 1; }
+        .advanced-details summary { cursor: pointer; font-size: 0.85rem; color: var(--primary); font-weight: 500; user-select: none; }
+        .advanced-filters { display: flex; gap: 1rem; margin-top: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; flex-wrap: wrap; }
+        .advanced-filters input { flex: 1; min-width: 120px; padding: 0.4rem; font-size: 0.85rem; }
+
+        .toggle-group { display: flex; align-items: center; gap: 1.5rem; }
+        .switch-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; user-select: none; }
+        .btn-text { background: none; border: none; color: var(--text-sub); text-decoration: underline; cursor: pointer; font-size: 0.85rem; }
+
+        /* Buttons */
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3); }
+        .btn-block { width: 100%; }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+        .btn-outline { background: transparent; border: 1px solid #4b5563; color: var(--text-sidebar); }
+        .btn-outline:hover { border-color: var(--white); color: var(--white); }
+        .btn-lg { height: 42px; padding: 0 1.5rem; }
+        
+        .btn-detail-hl { 
+            background: linear-gradient(135deg, #f97316, #ea580c); 
+            color: #ffffff !important; 
+            font-weight: 800; 
+            font-size: 0.9rem;
+            border: none; 
+            box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.4);
+            transition: all 0.2s ease-in-out;
+            padding: 0.45rem 1.2rem;
+        }
+        .btn-detail-hl:hover { background: linear-gradient(135deg, #ea580c, #c2410c); transform: translateY(-1px); }
+
+        /* Results */
+        .results-info { padding: 0.5rem 1.5rem; background: #eefff6; color: #065f46; font-size: 0.85rem; border-bottom: 1px solid #d1fae5; }
+        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; align-content: start; }
+
+        /* Generic Card Styles */
+        .card { background: var(--white); border: 1px solid #e5e7eb; border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+        .card-header { padding: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border-radius: 8px 8px 0 0; }
+        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.3; display: block; }
+        .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: normal; margin-top: 4px; display: inline-block; }
+        .card-body { padding: 1rem; flex: 1; font-size: 0.9rem; }
+        .card-footer { padding: 0.75rem 1rem; background: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px; display: flex; gap: 0.75rem; align-items: center; }
+
+        /* B8BL Card Specifics */
+        .card-dates { font-size: 0.75rem; color: var(--text-sub); text-align: right; background: #f9fafb; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: baseline; gap: 1rem; }
+        .data-label { color: var(--text-sub); font-size: 0.8rem; flex: 1; }
+        .data-value { font-weight: 500; text-align: right; flex: 2; word-break: break-word; }
+        .value-highlight { color: var(--primary); font-weight: 600; }
+        .commission-box { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .comm-label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); text-transform: uppercase; }
+        .comm-value { font-size: 1.4rem; font-weight: 800; color: var(--success); }
+
+        /* H71D Card Specifics */
+        .h71d-tag { font-size: 0.7rem; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; vertical-align: middle; margin-left: 6px;}
+        .tag-hkg { background-color: var(--hkg-tag); }
+        .tag-soto { background-color: var(--soto-tag); }
+        .tag-other { background-color: #6b7280; }
+        
+        .h71d-content { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.75rem; font-family: monospace; font-size: 0.85rem; color: #334155; margin-bottom: 0.75rem; white-space: pre-wrap; max-height: 120px; overflow-y: auto;}
+        
+        .h71d-wc1-box { display: flex; flex-direction: column; align-items: flex-end; }
+        .wc1-main { font-size: 1.4rem; font-weight: 800; color: var(--success); }
+        .wc1-fee { font-size: 0.9rem; font-weight: 600; color: var(--fee-tag); background: #ecfdf5; padding: 2px 6px; border-radius: 4px; margin-top: 2px; }
+
+        /* Slide Panel */
+        .slide-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 100%; max-width: 600px; background: var(--white); box-shadow: -10px 0 25px rgba(0,0,0,0.15); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 100; display: flex; flex-direction: column; }
+        .slide-panel.wide { max-width: 900px; }
+        .slide-panel.open { transform: translateX(0); }
+        .panel-header { padding: 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f9fafb; }
+        .panel-header h2 { margin: 0; font-size: 1.25rem; }
+        .btn-close { background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--text-sub); line-height: 1; padding: 0.5rem; }
+        .panel-content { padding: 1.5rem; overflow-y: auto; flex: 1; }
+
+        /* Detail Tables */
+        .detail-section { margin-bottom: 2rem; border: 1px solid #e5e7eb; border-radius: 6px; overflow-x: auto; }
+        .section-title { background: #f3f4f6; padding: 0.75rem 1rem; margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main); border-bottom: 1px solid #e5e7eb; display:flex; justify-content: space-between; align-items: center; }
+        .info-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 500px; }
+        .info-table th { background: #f9fafb; text-align: left; padding: 0.6rem 1rem; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: var(--text-sub); white-space: nowrap; }
+        .info-table td { padding: 0.6rem 1rem; border-bottom: 1px solid #e5e7eb; color: var(--text-main); vertical-align: top; }
+        .info-table tr:last-child td { border-bottom: none; }
+        .info-table tr:nth-child(even) { background-color: #fcfcfc; }
+        .note-block { padding: 1rem; background: #fff; font-family: monospace; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; color: #374151; max-height: 400px; overflow-y: auto; }
+        
+        .notes-section { background: #fffbeb; border: 1px solid #fcd34d; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
+        .notes-section h4 { margin: 0 0 0.75rem 0; color: #92400e; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+        .dual-input { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .notes-section textarea { width: 100%; height: 80px; border: 1px solid #fcd34d; border-radius: 4px; padding: 0.5rem; font-family: monospace; font-size: 0.85rem; resize: vertical; }
+        .notes-actions { display: flex; justify-content: flex-end; margin-top: 0.5rem; align-items: center; gap: 1rem; }
+        .status-text { font-size: 0.8rem; color: var(--success); }
+
+        /* Canvas */
+        .canvas-wrapper { border: 1px solid #e5e7eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1.5rem; padding: 1rem; background: #555; display: flex; justify-content: center; overflow-x: auto; }
+        #previewCanvas { max-width: 100%; height: auto; background: white; min-width: 600px; }
+        .text-summary-wrapper { width: 100%; margin-top: 1rem; }
+        .text-summary { font-family: monospace; white-space: pre-wrap; background: #f9fafb; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.85rem; line-height: 1.5; color: #374151; }
+
+        /* Empty State */
+        .empty-state { text-align: center; margin-top: 4rem; color: var(--text-sub); }
+        .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
+
+        /* Overlay & Modal */
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 50; backdrop-filter: blur(2px); display: none; }
+        .overlay.open { display: block; }
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 200; display: none; justify-content: center; align-items: center; padding: 1rem; }
+        .modal.open { display: flex; }
+        .modal-content { background: white; padding: 2rem; border-radius: 8px; max-width: 700px; width: 100%; max-height: 85vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; padding: 0.5rem; }
+        .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .tc-item { background: #f3f4f6; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem; }
+        .tc-code { font-weight: bold; color: var(--primary); }
+
+        .hidden { display: none !important; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #374151; padding: 1rem; max-height: 250px; }
+            .pcc-list { max-height: 80px; }
+            .sidebar-section { margin-bottom: 1rem; }
+            .sidebar-section.bottom { display: flex; align-items: center; justify-content: space-between; padding-top: 0.5rem; }
+            .search-row.primary { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+            .search-row.secondary { flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-top: 0.5rem; }
+            .input-group.action .btn { width: 100%; }
+            .slide-panel { width: 100%; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h2>Commission v4.0</h2>
+                <span class="badge">Global</span>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <h3>Datasets (PCC)</h3>
+                    <button id="btnRefreshDB" class="btn-icon" title="Refresh List">↻</button>
+                </div>
+                <div class="file-input-wrapper">
+                    <label for="uploadExcel" class="btn btn-primary btn-block">
+                        <span class="icon">+</span> Upload Excel (B8BL/H71D)
+                    </label>
+                    <input type="file" id="uploadExcel" accept=".xlsx, .xls" hidden>
+                </div>
+                <ul id="pccList" class="pcc-list">
+                    <li class="loading-text" style="color:#aaa; text-align:center;">Initializing...</li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section bottom">
+                <div class="btn-group" style="display:flex; gap:0.5rem;">
+                    <button id="btnExportData" class="btn btn-sm btn-outline">Export</button>
+                    <button id="btnImportData" class="btn btn-sm btn-outline">Import</button>
+                </div>
+                <div class="app-version">Supports B8BL & H71D</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Search Header -->
+            <header class="search-header">
+                <div class="search-row primary">
+                    <div class="input-group flex-2">
+                        <label id="lblAirline">Airline / 航司 / 关键字</label>
+                        <input type="text" id="inpAirline" placeholder="Code, Name or Keywords...">
+                    </div>
+                    <!-- B8BL Filters -->
+                    <div class="input-group flex-1 b8bl-only">
+                        <label>Origin / 始发</label>
+                        <input type="text" id="inpOrigin" placeholder="e.g. YYZ, CA">
+                    </div>
+                    <div class="input-group flex-1 b8bl-only">
+                        <label>Dest / 目的</label>
+                        <input type="text" id="inpDest" placeholder="e.g. LHR, GB">
+                    </div>
+                    <div class="input-group flex-1 b8bl-only">
+                        <label>Date / 日期</label>
+                        <input type="date" id="inpDate">
+                    </div>
+                    <div class="input-group action">
+                        <button id="btnSearch" class="btn btn-primary btn-lg">Search / 查询</button>
+                    </div>
+                </div>
+                
+                <div class="search-row secondary">
+                    <div class="b8bl-only" style="flex:1;">
+                        <details class="advanced-details">
+                            <summary>Advanced Filters (Cabin, Tour Code...)</summary>
+                            <div class="advanced-filters">
+                                <input type="text" id="inpCabin" placeholder="Cabin">
+                                <input type="text" id="inpRBD" placeholder="RBD">
+                                <input type="text" id="inpTourCode" placeholder="Tour Code">
+                                <input type="text" id="inpFareClass" placeholder="Fare Class">
+                            </div>
+                        </details>
+                    </div>
+                    <!-- H71D Hint -->
+                    <div class="h71d-only" style="color:#6b7280; font-size:0.85rem; font-style:italic;">
+                        * H71D Mode: Searching Full Text of Fare Content & Notes
+                    </div>
+
+                    <div class="toggle-group">
+                        <label class="switch-label">
+                            <input type="checkbox" id="chkCurrentPCC" checked> 
+                            <span>Current PCC Only</span>
+                        </label>
+                        <button id="btnShowTC" class="btn-text">TC Definitions</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Results Area -->
+            <div id="resultsHeader" class="results-info hidden">
+                Found <span id="resCount">0</span> rules.
+            </div>
+            <div id="resultsArea" class="results-grid">
+                <div class="empty-state">
+                    <div class="empty-icon">📂</div>
+                    <h3>Ready to Search</h3>
+                    <p>Supports North America (B8BL) & Hong Kong (H71D) formats.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Slide Panel -->
+        <div id="detailPanel" class="slide-panel">
+            <div class="panel-header">
+                <h2 id="panelTitle">Details</h2>
+                <button class="btn-close" onclick="closePanel('detailPanel')">&times;</button>
+            </div>
+            <div class="panel-content">
+                <div class="notes-section">
+                    <h4><span class="icon">✎</span> Agency Notes / 操作备注</h4>
+                    <div class="dual-input">
+                        <textarea id="noteEn" placeholder="Operator Notes (EN)"></textarea>
+                        <textarea id="noteCn" placeholder="操作备注 (中文)"></textarea>
+                    </div>
+                    <div class="notes-actions">
+                        <span id="noteSaveStatus" class="status-text"></span>
+                        <button id="btnSaveNotes" class="btn btn-sm btn-primary">Save Notes</button>
+                    </div>
+                </div>
+                <div id="panelBody" class="detail-body"></div>
+            </div>
+        </div>
+        
+        <!-- Canvas Panel (B8BL Only) -->
+        <div id="canvasPanel" class="slide-panel wide">
+            <div class="panel-header">
+                <h2>Commission Checklist</h2>
+                <button class="btn-close" onclick="closePanel('canvasPanel')">&times;</button>
+            </div>
+            <div class="panel-content center-content">
+                <div class="canvas-wrapper">
+                    <canvas id="previewCanvas"></canvas>
+                </div>
+                <div class="action-bar" style="text-align:center;">
+                    <button id="btnDownloadCanvas" class="btn btn-primary">Download Image</button>
+                </div>
+                <div class="text-summary-wrapper">
+                    <h4>Text Summary</h4>
+                    <div id="textSummary" class="text-summary" contenteditable="true"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal: TC Definitions -->
+        <div id="tcModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeModal('tcModal')">&times;</span>
+                <h3>IATA TC Definitions</h3>
+                <div id="tcContent" class="tc-grid">Loading...</div>
+            </div>
+        </div>
+
+        <div id="overlay" class="overlay" onclick="closeAllPanels()"></div>
+    </div>
+
+    <script>
+        /*******************************************************
+         * DATA & CONSTANTS
+         *******************************************************/
+        const DB_NAME = 'CommissionViewerV4';
+        const DB_VERSION = 1;
+        const AIRLINE_CN_MAP = {
+            "YP": "AIR PREMIA普莱米娅航空", "UA": "United Airlines美联航", "AC": "Air Canada加拿大航空",
+            "MU": "China Eastern东方航空", "CZ": "China Southern南方航空", "CA": "Air China中国国际航空",
+            "CI": "China Airlines中华航空", "BR": "EVA Airways长荣航空", "CX": "Cathay Pacific国泰航空",
+            "HU": "Hainan Airlines海南航空", "JX": "STARLUX星宇航空", "PR": "Philippine Airlines菲律宾航空",
+            "JL": "Japan Airlines日本航空", "KE": "Korean Air大韩航空", "OZ": "Asiana Airlines韩亚航空",
+            "SQ": "Singapore Airlines新加坡航空", "3U": "Sichuan Airlines四川航空", "DL": "Delta达美航空",
+            "AA": "American Airlines美国航空", "EK": "Emirates阿联酋航空"
+        };
+        const TC_MAP = { "YYZ":{"country":"CA"}, "YVR":{"country":"CA"}, "HKG":{"area":"TC3"}, "LHR":{"area":"TC2"} }; // Simplified for brevity
+
+        let db;
+        let state = {
+            currentPCC: null,
+            currentType: 'B8BL', // 'B8BL' or 'H71D'
+            allDatasets: [],
+            masterData: [], // For B8BL
+            h71dData: [],   // For H71D
+            summaryData: [],
+            detailsMap: {},
+            airlineCodeMap: {}
+        };
+
+        /*******************************************************
+         * DB INIT
+         *******************************************************/
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains('datasets')) db.createObjectStore('datasets', { keyPath: 'id' });
+                    if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
+                };
+                req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        /*******************************************************
+         * PARSERS
+         *******************************************************/
+        function parseExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // 1. Detect Format
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const a1 = firstSheet['A1'] ? firstSheet['A1'].v : '';
+                        
+                        if (a1 && String(a1).toLowerCase().includes('discount summary')) {
+                            // H71D Format
+                            resolve(parseH71D(workbook, file.name));
+                        } else {
+                            // B8BL Format (Default)
+                            resolve(parseB8BL(workbook, file.name));
+                        }
+                    } catch (err) { reject(err); }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function parseH71D(workbook, fileName) {
+            const sheetName = workbook.SheetNames[0];
+            const ws = workbook.Sheets[sheetName];
+            
+            // H71D usually starts data at row 5 (index 4), headers at row 4
+            // But we use sheet_to_json to be safe, starting from row 4 (range: 3)
+            const raw = XLSX.utils.sheet_to_json(ws, { range: 3, defval: "" });
+            
+            const processed = raw.map((row, idx) => {
+                // Parse WC1 (e.g. "- 6% then + 5")
+                const wc1Raw = row['WC1'] || '';
+                let comm = wc1Raw;
+                let fee = '';
+                
+                if (wc1Raw.includes('then')) {
+                    const parts = wc1Raw.split('then');
+                    comm = parts[0].trim();
+                    fee = parts[1].replace('+', '').trim() + " HKD";
+                } else if (wc1Raw.includes('+') && !wc1Raw.includes('%')) {
+                    // likely just a fee
+                    comm = '0%';
+                    fee = wc1Raw.replace('+', '').trim() + " HKD";
+                }
+
+                // Add nice Name
+                const code = row['Airline'];
+                const fullName = AIRLINE_CN_MAP[code] || code;
+
+                return {
+                    id: idx,
+                    airlineCode: code,
+                    airlineName: fullName,
+                    category: row['Category'], // HKG, SOTO, Notes
+                    fareType: row['Fare Type'],
+                    content: row['Fare Content'],
+                    extra: row['Extra Offer'],
+                    ticketing: row['Account/Ticketing Info'],
+                    rawWc1: wc1Raw,
+                    commDisplay: comm,
+                    feeDisplay: fee
+                };
+            });
+
+            return {
+                type: 'H71D',
+                data: processed,
+                pccSuggestion: 'H71D'
+            };
+        }
+
+        function parseB8BL(workbook, fileName) {
+            const result = { type: 'B8BL', master: [], summary: [], details: {}, pccSuggestion: 'B8BL' };
+            const nameMatch = fileName.match(/([A-Z0-9]{4})/);
+            if (nameMatch) result.pccSuggestion = nameMatch[1];
+
+            workbook.SheetNames.forEach(name => {
+                const ws = workbook.Sheets[name];
+                const lower = name.toLowerCase();
+                if (lower.includes('master')) result.master = XLSX.utils.sheet_to_json(ws);
+                else if (lower.includes('summary')) result.summary = XLSX.utils.sheet_to_json(ws);
+                else if (!lower.includes('dashboard')) {
+                    result.details[name] = XLSX.utils.sheet_to_json(ws, {header:1});
+                }
+            });
+            
+            // Enrich Master with Sheet Names
+            enrichB8BLMaster(result.master, result.summary);
+            return result;
+        }
+
+        function enrichB8BLMaster(master, summary) {
+            if (!master || !summary) return;
+            master.forEach(row => {
+                const mAl = (row['Airline']||'').toUpperCase();
+                const match = summary.find(s => {
+                    const sSheet = (s['Sheet Name']||'').toUpperCase();
+                    return sSheet.includes(mAl);
+                });
+                if (match) {
+                    row._sheetName = match['Sheet Name'];
+                    row._airlineCode = match['Airline Code'];
+                }
+            });
+        }
+
+        /*******************************************************
+         * DB FUNCTIONS
+         *******************************************************/
+        async function savePCC(id, parsedResult) {
+            const tx = db.transaction(['datasets'], 'readwrite');
+            const record = {
+                id: id,
+                type: parsedResult.type,
+                updated: new Date().toISOString(),
+                recordCount: parsedResult.type === 'H71D' ? parsedResult.data.length : parsedResult.master.length,
+                data: parsedResult // Store full structure
+            };
+            tx.objectStore('datasets').put(record);
+            return new Promise(resolve => { tx.oncomplete = () => resolve(); });
+        }
+
+        async function getPCCs() {
+            const tx = db.transaction(['datasets'], 'readonly');
+            return new Promise(resolve => {
+                tx.objectStore('datasets').getAll().onsuccess = (e) => {
+                    const res = e.target.result.map(r => ({
+                        id: r.id, type: r.type, updated: r.updated, count: r.recordCount
+                    }));
+                    resolve(res.sort((a,b) => new Date(b.updated) - new Date(a.updated)));
+                };
+            });
+        }
+
+        async function loadPCC(id) {
+            const tx = db.transaction(['datasets'], 'readonly');
+            return new Promise(resolve => {
+                tx.objectStore('datasets').get(id).onsuccess = (e) => {
+                    const res = e.target.result;
+                    if (!res) return resolve(null);
+                    
+                    state.currentType = res.type;
+                    if (res.type === 'H71D') {
+                        state.h71dData = res.data.data;
+                    } else {
+                        state.masterData = res.data.master;
+                        state.summaryData = res.data.summary;
+                        state.detailsMap = res.data.details;
+                        // Re-build map
+                        state.airlineCodeMap = {};
+                        for (const [c, n] of Object.entries(AIRLINE_CN_MAP)) state.airlineCodeMap[c] = n;
+                    }
+                    resolve(res);
+                };
+            });
+        }
+
+        /*******************************************************
+         * SEARCH LOGIC
+         *******************************************************/
+        async function handleSearch() {
+            const q = document.getElementById('inpAirline').value.toUpperCase().trim();
+            
+            // UI Toggle
+            if (state.currentType === 'H71D') {
+                document.body.classList.add('mode-h71d');
+                searchH71D(q);
+            } else {
+                document.body.classList.remove('mode-h71d');
+                searchB8BL(q);
+            }
+        }
+
+        function searchH71D(query) {
+            const results = state.h71dData.filter(row => {
+                if (!query) return true;
+                const fullText = (row.airlineCode + row.airlineName + row.category + row.content + row.extra).toUpperCase();
+                return fullText.includes(query);
+            });
+            renderResults(results);
+        }
+
+        function searchB8BL(query) {
+            // ... (Logic from V3.3 maintained for B8BL)
+            // Simply filtering masterData
+            const results = state.masterData.filter(row => {
+                if(!query) return true;
+                const txt = (row['Airline'] + (row._sheetName||'') + (row['Validating Carrier']||'')).toUpperCase();
+                
+                // Smart Code Match
+                if (AIRLINE_CN_MAP[query]) {
+                    const mappedName = AIRLINE_CN_MAP[query].toUpperCase();
+                    if (txt.includes(mappedName)) return true;
+                }
+                return txt.includes(query);
+            });
+            renderResults(results);
+        }
+
+        /*******************************************************
+         * RENDER LOGIC
+         *******************************************************/
+        function renderResults(results) {
+            const area = document.getElementById('resultsArea');
+            document.getElementById('resultsHeader').classList.remove('hidden');
+            document.getElementById('resCount').innerText = results.length;
+            area.innerHTML = '';
+
+            if (results.length === 0) {
+                area.innerHTML = '<div class="empty-state">No matches found.</div>';
+                return;
+            }
+
+            const limit = results.slice(0, 100);
+            limit.forEach(item => {
+                if (state.currentType === 'H71D') renderCardH71D(item, area);
+                else renderCardB8BL(item, area);
+            });
+        }
+
+        function renderCardH71D(item, container) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            let badgeClass = 'tag-other';
+            if (item.category.includes('HKG')) badgeClass = 'tag-hkg';
+            if (item.category.includes('SOTO')) badgeClass = 'tag-soto';
+
+            // WC1 Logic
+            const commHtml = item.feeDisplay 
+                ? `<div class="h71d-wc1-box"><span class="wc1-main">${item.commDisplay}</span><span class="wc1-fee">+${item.feeDisplay}</span></div>`
+                : `<span class="wc1-main">${item.commDisplay}</span>`;
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div>
+                        <span class="card-airline">${item.airlineName} (${item.airlineCode})</span>
+                        <span class="h71d-tag ${badgeClass}">${item.category}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="h71d-content">${item.content}</div>
+                    ${item.extra ? `<div style="font-size:0.8rem; color:#d97706;"><strong>Extra:</strong> ${item.extra}</div>` : ''}
+                    <div class="commission-box">
+                        <span class="comm-label">Commission</span>
+                        ${commHtml}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span style="font-size:0.75rem; color:#9ca3af;">Type: ${item.fareType}</span>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+
+        function renderCardB8BL(item, container) {
+            // ... (Standard B8BL Card rendering from V3.3)
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            let title = item._sheetName || item.Airline;
+            if (!item._sheetName && item['Validating Carrier']) {
+                title = `${item['Validating Carrier']} - ${state.airlineCodeMap[item['Validating Carrier']] || item.Airline}`;
+            }
+
+            const commP = item['Commission rate Adult %'];
+            const commA = item['Commission rate Adult Amount'];
+            let commDisplay = commP ? `${commP}` : (commA ? `${commA}` : '0%');
+            if (commDisplay !== '0%' && !commDisplay.includes('%')) commDisplay = '$' + commDisplay;
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-airline">${title}</span>
+                </div>
+                <div class="card-body">
+                    <div class="data-row"><span class="data-label">Route</span><span class="data-value value-highlight">${item.Origin||'ALL'} ➝ ${item.Destination||'ALL'}</span></div>
+                    <div class="data-row"><span class="data-label">Cabin</span><span class="data-value">${item.Cabin||'ALL'} / ${item.RBD||'ALL'}</span></div>
+                    <div class="commission-box">
+                        <span class="comm-label">Commission</span>
+                        <span class="comm-value">${commDisplay}</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-sm btn-detail-hl btn-detail">Details / 详情</button>
+                    <button class="btn btn-sm btn-primary btn-canvas">Checklist</button>
+                </div>
+            `;
+            
+            card.querySelector('.btn-detail').onclick = () => openDetailPanelB8BL(item);
+            card.querySelector('.btn-canvas').onclick = () => { /* Canvas logic */ };
+            
+            container.appendChild(card);
+        }
+
+        /*******************************************************
+         * UI HELPERS
+         *******************************************************/
+        async function refreshSidebar() {
+            state.allDatasets = await getPCCs();
+            els.pccList.innerHTML = '';
+            
+            state.allDatasets.forEach(ds => {
+                const li = document.createElement('li');
+                li.className = `pcc-item ${state.currentPCC === ds.id ? 'active' : ''}`;
+                li.innerHTML = `
+                    <div class="pcc-info"><span class="pcc-name">${ds.id}</span></div>
+                    <div class="pcc-stats">
+                        <span class="badge-type ${ds.type}">${ds.type}</span>
+                        <span>${ds.count} Records</span>
+                    </div>
+                `;
+                li.onclick = () => switchPCC(ds.id);
+                els.pccList.appendChild(li);
+            });
+        }
+
+        async function switchPCC(id) {
+            state.currentPCC = id;
+            await loadPCC(id);
+            refreshSidebar();
+            
+            // Update UI based on type
+            if (state.currentType === 'H71D') {
+                document.body.classList.add('mode-h71d');
+                document.getElementById('lblAirline').innerText = "Keywords / 关键词";
+                document.getElementById('inpAirline').placeholder = "Route, Cabin, Airline...";
+                searchH71D('');
+            } else {
+                document.body.classList.remove('mode-h71d');
+                document.getElementById('lblAirline').innerText = "Airline / 航司";
+                document.getElementById('inpAirline').placeholder = "Code (e.g. UA) or Name...";
+                searchB8BL('');
+            }
+        }
+
+        async function handleUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const btn = document.querySelector('label[for="uploadExcel"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Parsing...';
+
+            try {
+                const result = await parseExcelFile(file);
+                const pccId = prompt(`Enter ID for this ${result.type} file:`, result.pccSuggestion);
+                if (pccId) {
+                    await savePCC(pccId.toUpperCase(), result);
+                    await refreshSidebar();
+                    await switchPCC(pccId.toUpperCase());
+                }
+            } catch (err) {
+                alert("Error: " + err.message);
+                console.error(err);
+            } finally {
+                btn.innerHTML = originalText;
+                e.target.value = '';
+            }
+        }
+
+        // --- Detail Panel Logic (Simplified for B8BL) ---
+        async function openDetailPanelB8BL(item) {
+            const pcc = state.currentPCC;
+            document.getElementById('panelTitle').innerText = `${item._sheetName || item.Airline} (${pcc})`;
+            const body = document.getElementById('panelBody');
+            
+            // Find detail rows
+            let detailRows = [];
+            if (item._sheetName && state.detailsMap[item._sheetName]) {
+                detailRows = state.detailsMap[item._sheetName];
+            } else {
+                // Fallback search
+                const keys = Object.keys(state.detailsMap);
+                const key = keys.find(k => k.includes(item.Airline));
+                if (key) detailRows = state.detailsMap[key];
+            }
+
+            if (detailRows.length) {
+                let html = '<div class="detail-section"><table class="info-table">';
+                detailRows.forEach(row => {
+                    html += '<tr>' + row.map(c => `<td>${c}</td>`).join('') + '</tr>';
+                });
+                html += '</table></div>';
+                body.innerHTML = html;
+            } else {
+                body.innerHTML = '<p>No specific detail sheet found. Refer to Summary.</p>';
+            }
+            
+            document.getElementById('detailPanel').classList.add('open');
+            document.getElementById('overlay').classList.add('open');
+        }
+
+        function closeAllPanels() {
+            document.querySelectorAll('.slide-panel').forEach(el => el.classList.remove('open'));
+            document.getElementById('overlay').classList.remove('open');
+        }
+        window.closePanel = (id) => document.getElementById(id).classList.remove('open');
+        window.closeModal = (id) => document.getElementById(id).classList.remove('open');
+        
+        // --- Init ---
+        els.uploadInput.addEventListener('change', handleUpload);
+        document.getElementById('btnSearch').addEventListener('click', handleSearch);
+        document.getElementById('inpAirline').addEventListener('keypress', (e) => e.key === 'Enter' && handleSearch());
+        document.getElementById('btnRefreshDB').onclick = refreshSidebar;
+        
+        initDB().then(refreshSidebar);
+
+    </script>
+</body>
+</html>
