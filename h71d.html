@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commission Quick Viewer v4.1 (H71D & B8BL)</title>
+    <title>Commission Quick Viewer v4.2 (Robust Upload)</title>
     
-    <!-- SheetJS -->
+    <!-- SheetJS with reliable fallback -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script>
         if (typeof XLSX === 'undefined') {
@@ -14,12 +14,14 @@
     </script>
     
     <style>
+        /* Base V3 Styles */
         :root {
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
             --bg-app: #f3f4f6;
             --bg-sidebar: #111827;
             --text-sidebar: #e5e7eb;
+            --border: #e5e7eb;
             --white: #ffffff;
             --text-main: #1f2937;
             --text-sub: #6b7280;
@@ -27,12 +29,6 @@
             --warning: #f59e0b;
             --danger: #ef4444;
             --sidebar-width: 280px;
-            
-            /* H71D Specific Colors */
-            --hkg-tag-bg: #ede9fe; /* Light Violet */
-            --hkg-tag-text: #7c3aed;
-            --soto-tag-bg: #fce7f3; /* Light Pink */
-            --soto-tag-text: #db2777;
         }
 
         * { box-sizing: border-box; }
@@ -45,161 +41,117 @@
         .brand { margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; }
         .brand h2 { margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--white); }
         .badge { background: var(--success); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
-        
-        .badge-type { font-size: 0.6rem; padding: 2px 4px; border-radius: 3px; margin-left: 6px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2); }
-        .badge-type.B8BL { color: #60a5fa; border-color: #60a5fa; }
-        .badge-type.H71D { color: #c084fc; border-color: #c084fc; }
 
         .sidebar-section { margin-bottom: 2rem; flex: 1; display: flex; flex-direction: column; min-height: 0; }
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
         .sidebar h3 { font-size: 0.8rem; text-transform: uppercase; color: #9ca3af; margin: 0; letter-spacing: 0.05em; }
-        .btn-icon { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 1.2rem; padding: 0; }
-        .btn-icon:hover { color: var(--white); }
-
-        .file-input-wrapper { margin-bottom: 1rem; }
+        
         .pcc-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
         .pcc-item { padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; background: #1f2937; cursor: pointer; transition: all 0.2s; position: relative; border-left: 3px solid transparent; }
         .pcc-item:hover { background: #374151; }
         .pcc-item.active { background: #374151; border-left-color: var(--primary); }
         .pcc-info { display: flex; justify-content: space-between; align-items: baseline; }
         .pcc-name { font-weight: bold; font-size: 1rem; color: var(--white); }
-        .pcc-date { font-size: 0.75rem; color: #9ca3af; }
-        .pcc-stats { font-size: 0.75rem; color: #9ca3af; margin-top: 4px; display: flex; gap: 8px; align-items: center; }
-        .btn-delete-pcc { position: absolute; right: 8px; top: 8px; background: none; border: none; color: #6b7280; cursor: pointer; font-size: 1.1rem; padding: 0 4px; display: none; }
-        .pcc-item:hover .btn-delete-pcc { display: block; color: var(--danger); }
-
-        .sidebar-section.bottom { flex: 0; margin-bottom: 0; border-top: 1px solid #374151; padding-top: 1.5rem; }
-        .app-version { font-size: 0.7rem; color: #4b5563; text-align: center; margin-top: 1rem; }
+        .pcc-stats { font-size: 0.75rem; color: #9ca3af; margin-top: 4px; display: flex; gap: 6px; align-items: center; }
+        .badge-type { font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; border: 1px solid #4b5563; }
+        
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+        .btn-outline { background: transparent; border: 1px solid #4b5563; color: var(--text-sidebar); }
+        .btn-outline:hover { border-color: var(--white); color: var(--white); }
+        .btn-block { width: 100%; }
 
         /* Main Content */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: #f9fafb; }
 
-        /* Search Header */
-        .search-header { background: var(--white); padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10; }
+        .search-header { background: var(--white); padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10; }
         .search-row { display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 0.75rem; }
         .search-row.secondary { margin-bottom: 0; align-items: center; justify-content: space-between; }
-
-        .flex-1 { flex: 1; }
-        .flex-2 { flex: 2; }
-
-        .input-group label { display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-sub); text-transform: uppercase; }
-        .input-group input { width: 100%; padding: 0.6rem; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95rem; transition: border 0.2s; }
-        .input-group input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
         
-        /* Mode Specific Visibility */
-        body:not(.mode-h71d) .h71d-only { display: none !important; }
-        body.mode-h71d .b8bl-only { display: none !important; }
+        .input-group { display: flex; flex-direction: column; }
+        .flex-2 { flex: 2; } .flex-1 { flex: 1; }
+        .input-group label { font-size: 0.75rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-sub); text-transform: uppercase; }
+        .input-group input { padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
 
         .advanced-details { flex: 1; }
         .advanced-details summary { cursor: pointer; font-size: 0.85rem; color: var(--primary); font-weight: 500; user-select: none; }
         .advanced-filters { display: flex; gap: 1rem; margin-top: 0.75rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; flex-wrap: wrap; }
         .advanced-filters input { flex: 1; min-width: 120px; padding: 0.4rem; font-size: 0.85rem; }
 
-        .toggle-group { display: flex; align-items: center; gap: 1.5rem; }
-        .switch-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; user-select: none; }
-        .btn-text { background: none; border: none; color: var(--text-sub); text-decoration: underline; cursor: pointer; font-size: 0.85rem; }
-
-        /* Buttons */
-        .btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3); }
-        .btn-block { width: 100%; }
-        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
-        .btn-outline { background: transparent; border: 1px solid #4b5563; color: var(--text-sidebar); }
-        .btn-outline:hover { border-color: var(--white); color: var(--white); }
-        .btn-lg { height: 42px; padding: 0 1.5rem; }
-        
-        .btn-detail-hl { 
-            background: linear-gradient(135deg, #f97316, #ea580c); 
-            color: #ffffff !important; 
-            font-weight: 800; 
-            font-size: 0.9rem;
-            border: none; 
-            box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.4);
-            transition: all 0.2s ease-in-out;
-            padding: 0.45rem 1.2rem;
-            letter-spacing: 0.02em;
-        }
-        .btn-detail-hl:hover { background: linear-gradient(135deg, #ea580c, #c2410c); transform: translateY(-1px); }
+        /* Mode Visibility */
+        body:not(.mode-h71d) .h71d-only { display: none !important; }
+        body.mode-h71d .b8bl-only { display: none !important; }
 
         /* Results */
         .results-info { padding: 0.5rem 1.5rem; background: #eefff6; color: #065f46; font-size: 0.85rem; border-bottom: 1px solid #d1fae5; }
-        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; align-content: start; }
+        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; align-content: start; }
 
-        .card { background: var(--white); border: 1px solid #e5e7eb; border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
-        .card-header { padding: 1rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border-radius: 8px 8px 0 0; }
-        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.3; display: block; }
-        .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: normal; margin-top: 4px; display: inline-block; }
+        /* Cards (V3 Style) */
+        .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border-radius: 8px 8px 0 0; }
+        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.2; }
+        .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: normal; margin-left: 6px; }
+        .card-dates { font-size: 0.75rem; color: var(--text-sub); text-align: right; background: #f9fafb; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
+
         .card-body { padding: 1rem; flex: 1; font-size: 0.9rem; }
-        .card-footer { padding: 0.75rem 1rem; background: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px; display: flex; gap: 0.75rem; align-items: center; }
-
-        /* H71D Card Styles */
-        .h71d-tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; margin-left: 8px; display: inline-block; }
-        .tag-hkg { background-color: var(--hkg-tag-bg); color: var(--hkg-tag-text); border: 1px solid var(--hkg-tag-text); }
-        .tag-soto { background-color: var(--soto-tag-bg); color: var(--soto-tag-text); border: 1px solid var(--soto-tag-text); }
-        
-        .h71d-content-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem; }
-        .h71d-content-text { font-family: monospace; font-size: 0.85rem; color: #334155; white-space: pre-wrap; line-height: 1.4; }
-        .h71d-extra { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #cbd5e1; font-size: 0.8rem; color: #d97706; }
-        
-        .h71d-comm-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
-        .h71d-fee-pill { background: #d1fae5; color: #047857; padding: 2px 8px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; border: 1px solid #10b981; }
-
-        /* B8BL Card Styles */
-        .data-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: baseline; gap: 1rem; }
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: baseline; }
         .data-label { color: var(--text-sub); font-size: 0.8rem; flex: 1; }
         .data-value { font-weight: 500; text-align: right; flex: 2; word-break: break-word; }
         .value-highlight { color: var(--primary); font-weight: 600; }
-        .commission-box { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        
+        .commission-box { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center; }
         .comm-label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); text-transform: uppercase; }
         .comm-value { font-size: 1.4rem; font-weight: 800; color: var(--success); }
 
-        /* Slide Panel */
-        .slide-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 100%; max-width: 600px; background: var(--white); box-shadow: -10px 0 25px rgba(0,0,0,0.15); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 100; display: flex; flex-direction: column; }
-        .slide-panel.wide { max-width: 900px; }
+        .card-footer { padding: 0.75rem 1rem; background: #f9fafb; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; display: flex; gap: 0.75rem; }
+        
+        /* H71D Specific Styles */
+        .h71d-tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 8px; }
+        .tag-hkg { background: #ede9fe; color: #7c3aed; }
+        .tag-soto { background: #fce7f3; color: #db2777; }
+        
+        .h71d-content-box { margin-bottom: 1rem; font-family: monospace; font-size: 0.85rem; color: #4b5563; background: #f8fafc; padding: 0.5rem; border-radius: 4px; border: 1px solid #e5e7eb; white-space: pre-wrap; max-height: 100px; overflow-y: auto; }
+        .h71d-fee { font-size: 0.85rem; background: #ecfdf5; color: #047857; padding: 2px 6px; border-radius: 4px; border: 1px solid #10b981; margin-left: 0.5rem; }
+
+        /* Detail Panel */
+        .slide-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 600px; background: var(--white); box-shadow: -10px 0 25px rgba(0,0,0,0.15); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 100; display: flex; flex-direction: column; }
+        .slide-panel.wide { width: 900px; }
         .slide-panel.open { transform: translateX(0); }
-        .panel-header { padding: 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f9fafb; }
-        .panel-header h2 { margin: 0; font-size: 1.25rem; }
-        .btn-close { background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--text-sub); line-height: 1; padding: 0.5rem; }
+        .panel-header { padding: 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f9fafb; }
         .panel-content { padding: 1.5rem; overflow-y: auto; flex: 1; }
-
-        /* Tables & Notes */
-        .detail-section { margin-bottom: 2rem; border: 1px solid #e5e7eb; border-radius: 6px; overflow-x: auto; }
-        .section-title { background: #f3f4f6; padding: 0.75rem 1rem; margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main); border-bottom: 1px solid #e5e7eb; display:flex; justify-content: space-between; align-items: center; }
-        .info-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 500px; }
-        .info-table th { background: #f9fafb; text-align: left; padding: 0.6rem 1rem; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: var(--text-sub); white-space: nowrap; }
-        .info-table td { padding: 0.6rem 1rem; border-bottom: 1px solid #e5e7eb; color: var(--text-main); vertical-align: top; }
+        .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
         
-        .notes-section { background: #fffbeb; border: 1px solid #fcd34d; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
-        .dual-input { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .notes-section textarea { width: 100%; height: 80px; border: 1px solid #fcd34d; border-radius: 4px; padding: 0.5rem; font-family: monospace; font-size: 0.85rem; resize: vertical; }
-
-        /* Canvas */
-        .canvas-wrapper { border: 1px solid #e5e7eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1.5rem; padding: 1rem; background: #555; display: flex; justify-content: center; overflow-x: auto; }
-        #previewCanvas { max-width: 100%; height: auto; background: white; min-width: 600px; }
-
-        .empty-state { text-align: center; margin-top: 4rem; color: var(--text-sub); }
-        .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
-        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 50; backdrop-filter: blur(2px); display: none; }
-        .overlay.open { display: block; }
+        /* Tables */
+        .info-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .info-table th { background: #f9fafb; text-align: left; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); }
+        .info-table td { padding: 0.6rem 1rem; border-bottom: 1px solid #e5e7eb; }
         
-        .hidden { display: none !important; }
-
-        @media (max-width: 768px) {
-            .app-container { flex-direction: column; }
-            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #374151; padding: 1rem; max-height: 250px; }
-            .search-row.primary { flex-direction: column; align-items: stretch; gap: 0.5rem; }
-            .dual-input { grid-template-columns: 1fr; }
+        /* Details Button Highlight */
+        .btn-detail-hl { 
+            background: linear-gradient(135deg, #f97316, #ea580c); 
+            color: #ffffff !important; 
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3);
         }
+        .btn-detail-hl:hover { background: linear-gradient(135deg, #ea580c, #c2410c); }
+
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 50; display: none; }
+        .overlay.open { display: block; }
+        .hidden { display: none !important; }
+        .empty-state { text-align: center; margin-top: 4rem; color: #9ca3af; }
+        .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
     </style>
 </head>
 <body>
     <div id="app" class="app-container">
+        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
-                <h2>Commission v4.1</h2>
-                <span class="badge">Global</span>
+                <h2>Commission v4.2</h2>
+                <span class="badge">Pro</span>
             </div>
             
             <div class="sidebar-section">
@@ -209,15 +161,15 @@
                 </div>
                 <div class="file-input-wrapper">
                     <label for="uploadExcel" class="btn btn-primary btn-block">
-                        <span class="icon">+</span> Upload B8BL / H71D
+                        <span class="icon">+</span> Upload File
                     </label>
                     <input type="file" id="uploadExcel" accept=".xlsx, .xls" hidden>
                 </div>
                 <ul id="pccList" class="pcc-list">
-                    <li class="loading-text" style="color:#aaa; text-align:center;">Initializing...</li>
+                    <li class="loading-text" style="color:#aaa; text-align:center;">Initializing DB...</li>
                 </ul>
             </div>
-            
+
             <div class="sidebar-section bottom">
                 <div class="btn-group" style="display:flex; gap:0.5rem;">
                     <button id="btnExportData" class="btn btn-sm btn-outline">Export</button>
@@ -226,30 +178,35 @@
             </div>
         </aside>
 
+        <!-- Main Content -->
         <main class="main-content">
             <header class="search-header">
                 <div class="search-row primary">
                     <div class="input-group flex-2">
-                        <label id="lblAirline">Airline / 航司 / 关键字</label>
-                        <input type="text" id="inpAirline" placeholder="Enter Code (e.g. UA) or Keywords...">
+                        <label id="lblAirline">Airline / 航司</label>
+                        <input type="text" id="inpAirline" placeholder="Code (e.g. CA, UA) or Name...">
                     </div>
                     <div class="input-group flex-1 b8bl-only">
                         <label>Origin</label>
-                        <input type="text" id="inpOrigin" placeholder="YYZ, CA...">
+                        <input type="text" id="inpOrigin" placeholder="YYZ, CA">
                     </div>
                     <div class="input-group flex-1 b8bl-only">
                         <label>Dest</label>
-                        <input type="text" id="inpDest" placeholder="LHR, GB...">
+                        <input type="text" id="inpDest" placeholder="LHR, GB">
+                    </div>
+                    <div class="input-group flex-1 b8bl-only">
+                        <label>Date</label>
+                        <input type="date" id="inpDate">
                     </div>
                     <div class="input-group action">
-                        <button id="btnSearch" class="btn btn-primary btn-lg">Search / 查询</button>
+                        <button id="btnSearch" class="btn btn-primary btn-lg">Search</button>
                     </div>
                 </div>
                 
                 <div class="search-row secondary">
                     <div class="b8bl-only" style="flex:1;">
                         <details class="advanced-details">
-                            <summary>Filters (Cabin, Tour Code...)</summary>
+                            <summary>Advanced Filters</summary>
                             <div class="advanced-filters">
                                 <input type="text" id="inpCabin" placeholder="Cabin">
                                 <input type="text" id="inpRBD" placeholder="RBD">
@@ -258,8 +215,8 @@
                             </div>
                         </details>
                     </div>
-                    <div class="h71d-only" style="flex:1; color:#6b7280; font-size:0.85rem; font-style:italic;">
-                        <span class="icon">ℹ️</span> H71D Mode: Full text search enabled (e.g. "TFU", "Student")
+                    <div class="h71d-only" style="flex:1; font-size:0.85rem; color:#6b7280;">
+                        <i>* H71D Mode: Full text search active (e.g. "Student", "TFU")</i>
                     </div>
                     <div class="toggle-group">
                         <label class="switch-label">
@@ -270,51 +227,35 @@
                 </div>
             </header>
 
-            <div id="resultsHeader" class="results-info hidden">
-                Found <span id="resCount">0</span> rules.
-            </div>
+            <div id="resultsHeader" class="results-info hidden">Found <span id="resCount">0</span> rules.</div>
             <div id="resultsArea" class="results-grid">
                 <div class="empty-state">
                     <div class="empty-icon">📂</div>
                     <h3>Ready</h3>
-                    <p>Select a dataset or upload a file to begin.</p>
+                    <p>Select a dataset or upload a file.</p>
                 </div>
             </div>
         </main>
 
-        <!-- Slide Panel -->
+        <!-- Slide Panels -->
         <div id="detailPanel" class="slide-panel">
             <div class="panel-header">
                 <h2 id="panelTitle">Details</h2>
                 <button class="btn-close" onclick="closePanel('detailPanel')">&times;</button>
             </div>
-            <div class="panel-content">
-                <div class="notes-section">
-                    <h4><span class="icon">✎</span> Agency Notes / 操作备注</h4>
-                    <div class="dual-input">
-                        <textarea id="noteEn" placeholder="Notes (EN)"></textarea>
-                        <textarea id="noteCn" placeholder="备注 (中文)"></textarea>
-                    </div>
-                    <div class="notes-actions">
-                        <span id="noteSaveStatus" class="status-text"></span>
-                        <button id="btnSaveNotes" class="btn btn-sm btn-primary">Save</button>
-                    </div>
-                </div>
-                <div id="panelBody" class="detail-body"></div>
-            </div>
+            <div class="panel-content" id="panelBody"></div>
         </div>
         
-        <!-- Canvas Panel -->
         <div id="canvasPanel" class="slide-panel wide">
             <div class="panel-header">
                 <h2>Checklist</h2>
                 <button class="btn-close" onclick="closePanel('canvasPanel')">&times;</button>
             </div>
             <div class="panel-content center-content">
-                <div class="canvas-wrapper">
+                <div class="canvas-wrapper" style="border:1px solid #eee; padding:1rem; display:flex; justify-content:center;">
                     <canvas id="previewCanvas"></canvas>
                 </div>
-                <div class="action-bar" style="text-align:center;">
+                <div style="text-align:center; margin-top:1rem;">
                     <button id="btnDownloadCanvas" class="btn btn-primary">Download Image</button>
                 </div>
             </div>
@@ -323,8 +264,9 @@
         <div id="overlay" class="overlay" onclick="closeAllPanels()"></div>
     </div>
 
+    <!-- Logic -->
     <script>
-        const DB_NAME='CommissionViewerV4_1'; const DB_VERSION=1;
+        const DB_NAME='CommissionViewerV4_2'; const DB_VERSION=1;
         const AIRLINE_CN_MAP = {
             "3U":"Sichuan Airlines四川航空", "8M":"Myanmar Airways", "AC":"Air Canada加拿大航空",
             "CI":"China Airlines中华航空", "CX":"Cathay Pacific国泰航空", "CZ":"China Southern南方航空",
@@ -339,6 +281,7 @@
         let db;
         let state = { currentPCC:null, currentType:'B8BL', allDatasets:[], masterData:[], h71dData:[], summaryData:[], detailsMap:{}, airlineCodeMap:{} };
 
+        // --- Init DB ---
         function initDB() {
             return new Promise((resolve,reject)=>{
                 const req=indexedDB.open(DB_NAME,DB_VERSION);
@@ -352,7 +295,7 @@
             });
         }
 
-        // --- Parser Logic ---
+        // --- Robust Parser ---
         function parseExcelFile(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -361,80 +304,89 @@
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
                         
-                        // Smart Type Detection
+                        // Smart Detection: Scan first sheet for H71D signatures
                         const firstSheetName = workbook.SheetNames[0];
                         const ws = workbook.Sheets[firstSheetName];
                         
-                        // Check first 10 rows for signature columns
+                        // Robustly scan first 20 rows for H71D keywords
                         let isH71D = false;
-                        const range = XLSX.utils.decode_range(ws['!ref'] || "A1:G10");
-                        for (let R = 0; R <= Math.min(range.e.r, 10); ++R) {
-                            const rowText = [];
-                            for(let C=0; C<=range.e.c; ++C) {
+                        let h71dHeaderRow = 0;
+                        
+                        const range = XLSX.utils.decode_range(ws['!ref'] || "A1:G20");
+                        for (let R = range.s.r; R <= Math.min(range.e.r, 20); ++R) {
+                            const rowVals = [];
+                            for(let C = range.s.c; C <= range.e.c; ++C) {
                                 const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
-                                if(cell && cell.v) rowText.push(String(cell.v).toUpperCase());
+                                if(cell && cell.v) rowVals.push(String(cell.v).toUpperCase());
                             }
-                            const rowStr = rowText.join(' ');
-                            if (rowStr.includes('FARE CONTENT') && rowStr.includes('WC1')) {
+                            const rowStr = rowVals.join('|');
+                            if ((rowStr.includes('FARE CONTENT') || rowStr.includes('FARE TYPE')) && 
+                                (rowStr.includes('WC1') || rowStr.includes('COMMISSION'))) {
                                 isH71D = true;
+                                h71dHeaderRow = R;
                                 break;
                             }
                         }
 
                         if (isH71D) {
-                            resolve(parseH71D(workbook, file.name));
+                            console.log("Detected H71D format at row " + h71dHeaderRow);
+                            resolve(parseH71D(workbook, file.name, h71dHeaderRow));
                         } else {
+                            console.log("Defaulting to B8BL format");
                             resolve(parseB8BL(workbook, file.name));
                         }
-                    } catch (err) { console.error(err); reject(err); }
+                    } catch (err) { 
+                        console.error("Parse Error:", err);
+                        reject(err); 
+                    }
                 };
+                reader.onerror = (err) => reject(new Error("File read failed"));
                 reader.readAsArrayBuffer(file);
             });
         }
 
-        function parseH71D(workbook, fileName) {
+        function parseH71D(workbook, fileName, headerRowIndex) {
             const ws = workbook.Sheets[workbook.SheetNames[0]];
-            // H71D Header is at Row 4 (index 3), data starts Row 5
-            const raw = XLSX.utils.sheet_to_json(ws, { range: 3, defval: "" });
+            // Use found header row
+            const raw = XLSX.utils.sheet_to_json(ws, { range: headerRowIndex, defval: "" });
             
             const processed = raw.map((row, idx) => {
-                // Parse WC1: "- 6% then + 5" or "+ 500"
-                const wc1 = String(row['WC1'] || '');
+                // Parse WC1: "- 6% then + 5"
+                const wc1 = String(row['WC1'] || row['Commission'] || '');
                 let comm = '0%';
                 let fee = '';
                 
                 if (wc1.toLowerCase().includes('then')) {
                     const parts = wc1.split(/then/i);
-                    // Part 0 is commission usually "- 6%"
-                    let commPart = parts[0].replace(/-/g, '').trim(); // Remove minus
+                    let commPart = parts[0].replace(/-/g, '').trim();
                     if(commPart.includes('%')) comm = commPart;
-                    
-                    // Part 1 is fee usually "+ 5"
                     let feePart = parts[1].replace(/\+/g, '').trim();
                     if(feePart) fee = feePart + " HKD";
+                } else if (wc1.includes('+') && !wc1.includes('%')) {
+                    fee = wc1.replace(/\+/g, '').trim() + " HKD";
+                } else if (wc1.includes('%')) {
+                    comm = wc1.replace(/-/g, '').trim();
                 } else {
-                    // Single value like "+ 500" (Fee) or "- 6%" (Comm)
-                    if (wc1.includes('%')) {
-                        comm = wc1.replace(/-/g, '').trim();
-                    } else if (wc1.includes('+')) {
-                        fee = wc1.replace(/\+/g, '').trim() + " HKD";
-                    } else {
-                         // Fallback for just number
-                         if(wc1 && !isNaN(parseFloat(wc1))) fee = wc1 + " HKD"; 
-                    }
+                     if(wc1 && !isNaN(parseFloat(wc1))) fee = wc1 + " HKD"; 
                 }
-                
-                // Add HKG/SOTO logic
+
+                // Airline Name
+                const code = (row['Airline'] || '').trim().toUpperCase();
+                const fullName = AIRLINE_CN_MAP[code] || code;
+
+                // Category Tag Logic
                 const cat = (row['Category'] || '').toUpperCase();
                 let displayCat = cat;
                 if(cat.includes('HKG')) displayCat = 'EX-HKG';
-                
+                else if(cat.includes('SOTO')) displayCat = 'SOTO';
+
                 return {
                     id: idx,
-                    airline: row['Airline'],
+                    airlineCode: code,
+                    airlineName: fullName,
                     category: displayCat,
                     fareType: row['Fare Type'],
-                    content: row['Fare Content'],
+                    content: row['Fare Content'] || '',
                     extra: row['Extra Offer'],
                     commDisplay: comm,
                     feeDisplay: fee
@@ -453,14 +405,13 @@
                 const ws = workbook.Sheets[name];
                 const lower = name.toLowerCase();
                 if(lower.includes('master')) {
-                    // Try to find header row for master
+                    // Try to find header row by scanning for 'Commission' col
                     const json = XLSX.utils.sheet_to_json(ws, {header:1});
                     let headerRow = 0;
-                    for(let i=0; i<json.length; i++) {
-                        const rowStr = json[i].join(' ').toUpperCase();
-                        if(rowStr.includes('AIRLINE') && rowStr.includes('COMMISSION')) {
-                            headerRow = i;
-                            break;
+                    for(let i=0; i<Math.min(json.length, 20); i++) {
+                        const str = (json[i]||[]).join(' ').toUpperCase();
+                        if(str.includes('COMMISSION') && str.includes('AIRLINE')) {
+                            headerRow = i; break;
                         }
                     }
                     result.master = XLSX.utils.sheet_to_json(ws, {range: headerRow});
@@ -471,10 +422,11 @@
                 }
             });
             
-            // Enrich
+            // Enrich Master with Sheet Names for Titles
             if(result.master && result.summary) {
                 result.master.forEach(m => {
                     const mAl = (m['Airline']||'').toUpperCase();
+                    // Basic fuzzy match
                     const sItem = result.summary.find(s => (s['Sheet Name']||'').toUpperCase().includes(mAl));
                     if(sItem) {
                         m._sheetName = sItem['Sheet Name'];
@@ -485,7 +437,7 @@
             return result;
         }
 
-        // --- DB Ops ---
+        // --- Database & UI Ops ---
         async function savePCC(id, res) {
             const tx = db.transaction(['datasets'], 'readwrite');
             tx.objectStore('datasets').put({
@@ -503,6 +455,8 @@
                 state.allDatasets = list;
                 const ul = document.getElementById('pccList');
                 ul.innerHTML = '';
+                if(list.length===0) ul.innerHTML = '<li style="padding:1rem; text-align:center; color:#6b7280;">No datasets. Upload file.</li>';
+                
                 list.forEach(d => {
                     const li = document.createElement('li');
                     li.className = `pcc-item ${state.currentPCC===d.id ? 'active' : ''}`;
@@ -510,9 +464,8 @@
                         <div class="pcc-info"><span class="pcc-name">${d.id}</span></div>
                         <div class="pcc-stats">
                             <span class="badge-type ${d.type}">${d.type}</span>
-                            <span>${d.recordCount} Rules</span>
-                        </div>
-                    `;
+                            <span>${d.recordCount} Rows</span>
+                        </div>`;
                     li.onclick = () => loadDataset(d.id);
                     ul.appendChild(li);
                 });
@@ -534,7 +487,7 @@
                     document.body.classList.remove('mode-h71d');
                 }
                 refreshSidebar();
-                handleSearch(); // Refresh results
+                handleSearch();
             };
         }
 
@@ -545,17 +498,23 @@
             let results = [];
 
             if (state.currentType === 'H71D') {
+                // H71D Full Text Search
                 results = state.h71dData.filter(r => {
                     if(!q) return true;
-                    const txt = (r.airline + r.content + r.category).toUpperCase();
+                    const txt = (r.airlineCode + r.airlineName + r.content + r.category).toUpperCase();
                     return txt.includes(q);
                 });
                 renderH71D(results, resArea);
             } else {
-                // B8BL Search
+                // B8BL Logic
                 results = state.masterData.filter(r => {
                     if(!q) return true;
                     const txt = (r['Airline'] + (r._sheetName||'') + (r._code||'')).toUpperCase();
+                    // Match code via map
+                    if(AIRLINE_CN_MAP[q]) {
+                         const mapName = AIRLINE_CN_MAP[q].toUpperCase();
+                         if(txt.includes(mapName)) return true;
+                    }
                     return txt.includes(q);
                 });
                 renderB8BL(results, resArea);
@@ -571,31 +530,29 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 
-                let tagClass = 'tag-other';
+                let tagClass = '';
                 if(item.category.includes('HKG')) tagClass = 'tag-hkg';
                 if(item.category.includes('SOTO')) tagClass = 'tag-soto';
                 
-                const cnName = AIRLINE_CN_MAP[item.airline] || item.airline;
-                
                 card.innerHTML = `
                     <div class="card-header">
-                        <span class="card-airline">${cnName}</span>
-                        <span class="h71d-tag ${tagClass}">${item.category}</span>
+                        <div>
+                            <span class="card-airline">${item.airlineName}</span>
+                            ${tagClass ? `<span class="h71d-tag ${tagClass}">${item.category}</span>` : ''}
+                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="h71d-content-box">
-                            <div class="h71d-content-text">${item.content}</div>
-                            ${item.extra ? `<div class="h71d-extra">EXTRA: ${item.extra}</div>` : ''}
-                        </div>
+                        <div class="h71d-content-box">${item.content}</div>
                         <div class="commission-box">
-                            <div class="h71d-comm-row" style="width:100%">
+                            <span class="comm-label">Commission</span>
+                            <div style="display:flex; align-items:center;">
                                 <span class="comm-value">${item.commDisplay}</span>
-                                ${item.feeDisplay ? `<span class="h71d-fee-pill">+ ${item.feeDisplay} Fee</span>` : ''}
+                                ${item.feeDisplay ? `<span class="h71d-fee">+ ${item.feeDisplay}</span>` : ''}
                             </div>
                         </div>
                     </div>
-                    <div class="card-footer" style="justify-content:space-between">
-                         <span style="font-size:0.75rem; color:#6b7280;">Type: ${item.fareType}</span>
+                    <div class="card-footer">
+                        <span style="font-size:0.75rem; color:#6b7280;">Type: ${item.fareType}</span>
                     </div>
                 `;
                 container.appendChild(card);
@@ -608,37 +565,47 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 
-                const title = item._sheetName || item.Airline;
+                // Title Priority: Sheet Name > Mapped Name > Airline Column
+                let title = item._sheetName || item.Airline;
+                if(!item._sheetName && item['Validating Carrier']) {
+                    const code = item['Validating Carrier'];
+                    title = `${code} - ${AIRLINE_CN_MAP[code] || item.Airline}`;
+                }
+
                 let comm = item['Commission rate Adult %'] || '0%';
-                if(!comm.includes('%')) comm += '%'; // Basic fix
-                
+                if(!comm.includes('%')) comm += '%';
+
                 card.innerHTML = `
                     <div class="card-header">
                         <span class="card-airline">${title}</span>
                     </div>
                     <div class="card-body">
-                        <div class="data-row"><span class="data-label">Route</span><span class="data-value value-highlight">${item.Origin||'ALL'} ➝ ${item.Destination||'ALL'}</span></div>
-                        <div class="data-row"><span class="data-label">Cabin</span><span class="data-value">${item.Cabin||'ALL'}</span></div>
+                        <div class="data-row">
+                            <span class="data-label">Route</span>
+                            <span class="data-value value-highlight">${item.Origin||'ALL'} ➝ ${item.Destination||'ALL'}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Cabin</span>
+                            <span class="data-value">${item.Cabin||'ALL'} / ${item.RBD||'ALL'}</span>
+                        </div>
                         <div class="commission-box">
                              <span class="comm-label">Commission</span>
                              <span class="comm-value">${comm}</span>
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button class="btn btn-sm btn-detail-hl" onclick='openDetailB8BL(${JSON.stringify(item).replace(/'/g, "&#39;")})'>Details / 详情</button>
+                        <button class="btn btn-sm btn-detail-hl" style="width:100%" onclick='openDetailB8BL(${JSON.stringify(item).replace(/'/g, "&#39;")})'>Details / 详情</button>
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // --- Details Logic ---
         window.openDetailB8BL = function(item) {
-            const pcc = state.currentPCC;
             const sheet = item._sheetName;
-            document.getElementById('panelTitle').innerText = `${sheet || item.Airline} (${pcc})`;
+            document.getElementById('panelTitle').innerText = `${sheet || item.Airline}`;
             
-            let html = '<p>No details found.</p>';
+            let html = '<p style="padding:1rem; color:#666">No additional details found.</p>';
             if (sheet && state.detailsMap[sheet]) {
                 const rows = state.detailsMap[sheet];
                 html = '<div class="detail-section"><table class="info-table">';
@@ -652,21 +619,21 @@
             document.getElementById('overlay').classList.add('open');
         };
 
-        // --- Core Events ---
+        // --- Listeners ---
         document.getElementById('uploadExcel').addEventListener('change', async (e) => {
             const btn = document.querySelector('label[for="uploadExcel"]');
             const orig = btn.innerHTML;
-            btn.innerHTML = 'Parsing...';
+            btn.innerHTML = 'Analyzing...';
             try {
                 if(!e.target.files[0]) return;
                 const res = await parseExcelFile(e.target.files[0]);
-                const id = prompt(`Enter Name for ${res.type} file:`, res.pccSuggestion);
+                const id = prompt(`Enter ID for ${res.type} file:`, res.pccSuggestion);
                 if(id) {
                     await savePCC(id.toUpperCase(), res);
                     await refreshSidebar();
                     await loadDataset(id.toUpperCase());
                 }
-            } catch(err) { alert("Error: "+err.message); }
+            } catch(err) { alert("Upload Failed: "+err.message); }
             btn.innerHTML = orig;
             e.target.value = '';
         });
@@ -675,7 +642,7 @@
         document.getElementById('inpAirline').onkeypress = (e) => e.key==='Enter' && handleSearch();
         document.getElementById('btnRefreshDB').onclick = refreshSidebar;
         window.closePanel = (id) => { document.getElementById(id).classList.remove('open'); document.getElementById('overlay').classList.remove('open'); };
-        window.closeAllPanels = () => closePanel('detailPanel') || closePanel('canvasPanel');
+        window.closeAllPanels = () => { closePanel('detailPanel'); closePanel('canvasPanel'); };
 
         initDB().then(refreshSidebar);
     </script>
