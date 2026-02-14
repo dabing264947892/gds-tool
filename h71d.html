@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commission Quick Viewer v4.3 (Code Search Fix)</title>
+    <title>Commission Quick Viewer v4.4 (Instant Search Fix)</title>
     
     <!-- SheetJS with reliable fallback -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -74,6 +74,7 @@
         .flex-2 { flex: 2; } .flex-1 { flex: 1; }
         .input-group label { font-size: 0.75rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-sub); text-transform: uppercase; }
         .input-group input { padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
+        .input-group input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
 
         .advanced-details { flex: 1; }
         .advanced-details summary { cursor: pointer; font-size: 0.85rem; color: var(--primary); font-weight: 500; user-select: none; }
@@ -86,7 +87,7 @@
 
         /* Results */
         .results-info { padding: 0.5rem 1.5rem; background: #eefff6; color: #065f46; font-size: 0.85rem; border-bottom: 1px solid #d1fae5; }
-        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; align-content: start; }
+        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; align-content: start; }
 
         /* Cards */
         .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
@@ -157,8 +158,8 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
-                <h2>Commission v4.3</h2>
-                <span class="badge">Fixed</span>
+                <h2>Commission v4.4</h2>
+                <span class="badge">Fixes</span>
             </div>
             
             <div class="sidebar-section">
@@ -190,8 +191,9 @@
             <header class="search-header">
                 <div class="search-row primary">
                     <div class="input-group flex-2">
-                        <label id="lblAirline">Airline / 航司</label>
-                        <input type="text" id="inpAirline" placeholder="Code (e.g. UA) or Name...">
+                        <label id="lblAirline">Airline / 航司 (Type to search)</label>
+                        <!-- Added oninput for instant search -->
+                        <input type="text" id="inpAirline" placeholder="Code (e.g. CA, UA) or Name..." oninput="handleSearchInput(this.value)">
                     </div>
                     <div class="input-group flex-1 b8bl-only">
                         <label>Origin</label>
@@ -273,7 +275,7 @@
 
     <!-- Logic -->
     <script>
-        const DB_NAME='CommissionViewerV4_3'; const DB_VERSION=1;
+        const DB_NAME='CommissionViewerV4_4'; const DB_VERSION=1;
         
         // Comprehensive Mapping: Code -> Name (and vice versa via lookup)
         const AIRLINE_CN_MAP = {
@@ -292,6 +294,7 @@
         
         let db;
         let state = { currentPCC:null, currentType:'B8BL', allDatasets:[], masterData:[], h71dData:[], summaryData:[], detailsMap:{}, airlineCodeMap:{} };
+        let searchTimeout = null; // For debounce
 
         // --- Init DB ---
         function initDB() {
@@ -445,18 +448,11 @@
                 
                 // 2. If no code yet, try to derive from AIRLINE_CN_MAP (Reverse Lookup)
                 if (!row._airlineCode) {
-                    // Try to find if 'United Airlines' is in value of 'UA'
                     for (const [code, name] of Object.entries(AIRLINE_CN_MAP)) {
                         const nameUpper = name.toUpperCase();
                         if (nameUpper.includes(mAlUpper) || mAlUpper.includes(nameUpper)) {
                             row._airlineCode = code;
                             break;
-                        }
-                        // Check if just the name part matches e.g. "United Airlines" inside "United Airlines美联航"
-                        const cleanName = nameUpper.replace(/[^\x00-\x7F]/g, "").trim(); // Remove Chinese
-                        if (cleanName && (mAlUpper.includes(cleanName) || cleanName.includes(mAlUpper))) {
-                             row._airlineCode = code;
-                             break;
                         }
                     }
                 }
@@ -520,6 +516,14 @@
             };
         }
 
+        // --- Instant Search Debounce ---
+        function handleSearchInput(val) {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                handleSearch();
+            }, 300);
+        }
+
         // --- Search ---
         function handleSearch() {
             const q = document.getElementById('inpAirline').value.toUpperCase().trim();
@@ -551,15 +555,27 @@
                     
                     // 3. Mapped match (Type "UA" -> Match "United")
                     if (AIRLINE_CN_MAP[q]) {
+                        // Extract just English part from map "CHINA EASTERN东方航空" -> "CHINA EASTERN"
                         const fullMapName = AIRLINE_CN_MAP[q].toUpperCase();
-                        if (name.includes(fullMapName) || fullMapName.includes(name)) return true;
+                        const enName = fullMapName.replace(/[^\x00-\x7F]/g, "").trim();
+                        if (name.includes(enName) || enName.includes(name)) return true;
                     }
                     
-                    // 4. Reverse Mapped match (Type "United" -> Match "UA" code)
-                    // (Already handled by enrichment, if row has _airlineCode, simple includes works)
-                    
+                    // 4. Fallback
                     return sheet.includes(q);
                 });
+                
+                // Sort to put Exact Code Matches at Top
+                if (q.length > 0 && q.length < 4) {
+                    results.sort((a,b) => {
+                        const codeA = (a._airlineCode || a['Validating Carrier'] || '').toUpperCase();
+                        const codeB = (b._airlineCode || b['Validating Carrier'] || '').toUpperCase();
+                        if (codeA === q && codeB !== q) return -1;
+                        if (codeB === q && codeA !== q) return 1;
+                        return 0;
+                    });
+                }
+                
                 renderB8BL(results, resArea);
             }
             
@@ -572,7 +588,7 @@
             list.slice(0, 100).forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                let tagClass = '';
+                let tagClass = 'tag-other';
                 if(item.category.includes('HKG')) tagClass = 'tag-hkg';
                 if(item.category.includes('SOTO')) tagClass = 'tag-soto';
                 
@@ -615,6 +631,9 @@
                 if (!title) {
                     if (code) title = `${code} - ${name}`;
                     else title = name;
+                } else if (code && !title.startsWith(code)) {
+                    // Prepend code if not present in sheet name for clarity
+                    title = `${code} - ${title}`;
                 }
 
                 let comm = item['Commission rate Adult %'] || '0%';
@@ -626,7 +645,7 @@
                     </div>
                     <div class="card-body">
                         <div class="data-row"><span class="data-label">Route</span><span class="data-value value-highlight">${item.Origin||'ALL'} ➝ ${item.Destination||'ALL'}</span></div>
-                        <div class="data-row"><span class="data-label">Cabin</span><span class="data-value">${item.Cabin||'ALL'}</span></div>
+                        <div class="data-row"><span class="data-label">Cabin</span><span class="data-value">${item.Cabin||'ALL'} / ${item.RBD||'ALL'}</span></div>
                         <div class="commission-box">
                              <span class="comm-label">Commission</span>
                              <span class="comm-value">${comm}</span>
@@ -686,6 +705,7 @@
         });
 
         document.getElementById('btnSearch').onclick = handleSearch;
+        // Keep enter key support just in case
         document.getElementById('inpAirline').onkeypress = (e) => e.key==='Enter' && handleSearch();
         document.getElementById('btnRefreshDB').onclick = refreshSidebar;
         window.closePanel = (id) => { document.getElementById(id).classList.remove('open'); document.getElementById('overlay').classList.remove('open'); };
