@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commission Quick Viewer v4.2 (Robust Upload)</title>
+    <title>Commission Quick Viewer v4.3 (Code Search Fix)</title>
     
     <!-- SheetJS with reliable fallback -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -14,7 +14,7 @@
     </script>
     
     <style>
-        /* Base V3 Styles */
+        /* Base Styles */
         :root {
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
@@ -86,13 +86,13 @@
 
         /* Results */
         .results-info { padding: 0.5rem 1.5rem; background: #eefff6; color: #065f46; font-size: 0.85rem; border-bottom: 1px solid #d1fae5; }
-        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; align-content: start; }
+        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; align-content: start; }
 
-        /* Cards (V3 Style) */
+        /* Cards */
         .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
         .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .card-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border-radius: 8px 8px 0 0; }
-        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.2; }
+        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.3; display: block; }
         .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: normal; margin-left: 6px; }
         .card-dates { font-size: 0.75rem; color: var(--text-sub); text-align: right; background: #f9fafb; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
 
@@ -108,15 +108,15 @@
 
         .card-footer { padding: 0.75rem 1rem; background: #f9fafb; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; display: flex; gap: 0.75rem; }
         
-        /* H71D Specific Styles */
+        /* H71D Styles */
         .h71d-tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 8px; }
         .tag-hkg { background: #ede9fe; color: #7c3aed; }
         .tag-soto { background: #fce7f3; color: #db2777; }
-        
+        .tag-other { background: #f3f4f6; color: #6b7280; }
         .h71d-content-box { margin-bottom: 1rem; font-family: monospace; font-size: 0.85rem; color: #4b5563; background: #f8fafc; padding: 0.5rem; border-radius: 4px; border: 1px solid #e5e7eb; white-space: pre-wrap; max-height: 100px; overflow-y: auto; }
         .h71d-fee { font-size: 0.85rem; background: #ecfdf5; color: #047857; padding: 2px 6px; border-radius: 4px; border: 1px solid #10b981; margin-left: 0.5rem; }
 
-        /* Detail Panel */
+        /* Slide Panel */
         .slide-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 600px; background: var(--white); box-shadow: -10px 0 25px rgba(0,0,0,0.15); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 100; display: flex; flex-direction: column; }
         .slide-panel.wide { width: 900px; }
         .slide-panel.open { transform: translateX(0); }
@@ -143,6 +143,13 @@
         .hidden { display: none !important; }
         .empty-state { text-align: center; margin-top: 4rem; color: #9ca3af; }
         .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #374151; padding: 1rem; max-height: 250px; }
+            .search-row.primary { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+            .slide-panel { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -150,8 +157,8 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
-                <h2>Commission v4.2</h2>
-                <span class="badge">Pro</span>
+                <h2>Commission v4.3</h2>
+                <span class="badge">Fixed</span>
             </div>
             
             <div class="sidebar-section">
@@ -169,7 +176,7 @@
                     <li class="loading-text" style="color:#aaa; text-align:center;">Initializing DB...</li>
                 </ul>
             </div>
-
+            
             <div class="sidebar-section bottom">
                 <div class="btn-group" style="display:flex; gap:0.5rem;">
                     <button id="btnExportData" class="btn btn-sm btn-outline">Export</button>
@@ -184,7 +191,7 @@
                 <div class="search-row primary">
                     <div class="input-group flex-2">
                         <label id="lblAirline">Airline / 航司</label>
-                        <input type="text" id="inpAirline" placeholder="Code (e.g. CA, UA) or Name...">
+                        <input type="text" id="inpAirline" placeholder="Code (e.g. UA) or Name...">
                     </div>
                     <div class="input-group flex-1 b8bl-only">
                         <label>Origin</label>
@@ -216,7 +223,7 @@
                         </details>
                     </div>
                     <div class="h71d-only" style="flex:1; font-size:0.85rem; color:#6b7280;">
-                        <i>* H71D Mode: Full text search active (e.g. "Student", "TFU")</i>
+                        <i>* H71D Mode: Search by text content enabled</i>
                     </div>
                     <div class="toggle-group">
                         <label class="switch-label">
@@ -266,7 +273,9 @@
 
     <!-- Logic -->
     <script>
-        const DB_NAME='CommissionViewerV4_2'; const DB_VERSION=1;
+        const DB_NAME='CommissionViewerV4_3'; const DB_VERSION=1;
+        
+        // Comprehensive Mapping: Code -> Name (and vice versa via lookup)
         const AIRLINE_CN_MAP = {
             "3U":"Sichuan Airlines四川航空", "8M":"Myanmar Airways", "AC":"Air Canada加拿大航空",
             "CI":"China Airlines中华航空", "CX":"Cathay Pacific国泰航空", "CZ":"China Southern南方航空",
@@ -275,9 +284,12 @@
             "MU":"China Eastern东方航空", "NH":"ANA全日空", "NZ":"Air New Zealand",
             "OZ":"Asiana Airlines韩亚航空", "PR":"Philippine Airlines", "QF":"Qantas",
             "QR":"Qatar Airways", "SQ":"Singapore Airlines", "TK":"Turkish Airlines",
-            "UA":"United Airlines美联航", "VS":"Virgin Atlantic", "WS":"WestJet", "YP":"Air Premia"
+            "UA":"United Airlines美联航", "VS":"Virgin Atlantic", "WS":"WestJet", "YP":"Air Premia",
+            "DL":"Delta Air Lines", "AA":"American Airlines", "AF":"Air France", "KL":"KLM",
+            "LH":"Lufthansa", "LX":"Swiss", "OS":"Austrian", "SN":"Brussels Airlines",
+            "BR":"EVA Air", "MF":"Xiamen Airlines", "B6":"JetBlue", "AS":"Alaska Airlines"
         };
-
+        
         let db;
         let state = { currentPCC:null, currentType:'B8BL', allDatasets:[], masterData:[], h71dData:[], summaryData:[], detailsMap:{}, airlineCodeMap:{} };
 
@@ -304,16 +316,14 @@
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
                         
-                        // Smart Detection: Scan first sheet for H71D signatures
+                        // Smart Detection
                         const firstSheetName = workbook.SheetNames[0];
                         const ws = workbook.Sheets[firstSheetName];
                         
-                        // Robustly scan first 20 rows for H71D keywords
                         let isH71D = false;
                         let h71dHeaderRow = 0;
-                        
                         const range = XLSX.utils.decode_range(ws['!ref'] || "A1:G20");
-                        for (let R = range.s.r; R <= Math.min(range.e.r, 20); ++R) {
+                        for (let R = 0; R <= Math.min(range.e.r, 20); ++R) {
                             const rowVals = [];
                             for(let C = range.s.c; C <= range.e.c; ++C) {
                                 const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
@@ -329,16 +339,11 @@
                         }
 
                         if (isH71D) {
-                            console.log("Detected H71D format at row " + h71dHeaderRow);
                             resolve(parseH71D(workbook, file.name, h71dHeaderRow));
                         } else {
-                            console.log("Defaulting to B8BL format");
                             resolve(parseB8BL(workbook, file.name));
                         }
-                    } catch (err) { 
-                        console.error("Parse Error:", err);
-                        reject(err); 
-                    }
+                    } catch (err) { console.error("Parse Error:", err); reject(err); }
                 };
                 reader.onerror = (err) => reject(new Error("File read failed"));
                 reader.readAsArrayBuffer(file);
@@ -347,7 +352,6 @@
 
         function parseH71D(workbook, fileName, headerRowIndex) {
             const ws = workbook.Sheets[workbook.SheetNames[0]];
-            // Use found header row
             const raw = XLSX.utils.sheet_to_json(ws, { range: headerRowIndex, defval: "" });
             
             const processed = raw.map((row, idx) => {
@@ -370,11 +374,8 @@
                      if(wc1 && !isNaN(parseFloat(wc1))) fee = wc1 + " HKD"; 
                 }
 
-                // Airline Name
                 const code = (row['Airline'] || '').trim().toUpperCase();
                 const fullName = AIRLINE_CN_MAP[code] || code;
-
-                // Category Tag Logic
                 const cat = (row['Category'] || '').toUpperCase();
                 let displayCat = cat;
                 if(cat.includes('HKG')) displayCat = 'EX-HKG';
@@ -392,7 +393,6 @@
                     feeDisplay: fee
                 };
             });
-            
             return { type: 'H71D', data: processed, pccSuggestion: 'H71D' };
         }
 
@@ -405,7 +405,6 @@
                 const ws = workbook.Sheets[name];
                 const lower = name.toLowerCase();
                 if(lower.includes('master')) {
-                    // Try to find header row by scanning for 'Commission' col
                     const json = XLSX.utils.sheet_to_json(ws, {header:1});
                     let headerRow = 0;
                     for(let i=0; i<Math.min(json.length, 20); i++) {
@@ -422,19 +421,51 @@
                 }
             });
             
-            // Enrich Master with Sheet Names for Titles
-            if(result.master && result.summary) {
-                result.master.forEach(m => {
-                    const mAl = (m['Airline']||'').toUpperCase();
-                    // Basic fuzzy match
-                    const sItem = result.summary.find(s => (s['Sheet Name']||'').toUpperCase().includes(mAl));
-                    if(sItem) {
-                        m._sheetName = sItem['Sheet Name'];
-                        m._code = sItem['Airline Code'];
-                    }
-                });
-            }
+            enrichB8BLMaster(result.master, result.summary);
             return result;
+        }
+
+        // AGGRESSIVE ENRICHMENT for Code Search
+        function enrichB8BLMaster(master, summary) {
+            if (!master) return;
+            master.forEach(row => {
+                const mAl = (row['Airline']||'').trim();
+                const mAlUpper = mAl.toUpperCase();
+                
+                // 1. Try to find Sheet Name from Summary
+                let matchedSummary = null;
+                if (summary) {
+                    matchedSummary = summary.find(s => (s['Sheet Name']||'').toUpperCase().includes(mAlUpper));
+                }
+                
+                if (matchedSummary) {
+                    row._sheetName = matchedSummary['Sheet Name'];
+                    row._airlineCode = matchedSummary['Airline Code'];
+                }
+                
+                // 2. If no code yet, try to derive from AIRLINE_CN_MAP (Reverse Lookup)
+                if (!row._airlineCode) {
+                    // Try to find if 'United Airlines' is in value of 'UA'
+                    for (const [code, name] of Object.entries(AIRLINE_CN_MAP)) {
+                        const nameUpper = name.toUpperCase();
+                        if (nameUpper.includes(mAlUpper) || mAlUpper.includes(nameUpper)) {
+                            row._airlineCode = code;
+                            break;
+                        }
+                        // Check if just the name part matches e.g. "United Airlines" inside "United Airlines美联航"
+                        const cleanName = nameUpper.replace(/[^\x00-\x7F]/g, "").trim(); // Remove Chinese
+                        if (cleanName && (mAlUpper.includes(cleanName) || cleanName.includes(mAlUpper))) {
+                             row._airlineCode = code;
+                             break;
+                        }
+                    }
+                }
+                
+                // 3. Fallback: Check if Validating Carrier col exists
+                if (!row._airlineCode && row['Validating Carrier']) {
+                    row._airlineCode = row['Validating Carrier'];
+                }
+            });
         }
 
         // --- Database & UI Ops ---
@@ -455,8 +486,6 @@
                 state.allDatasets = list;
                 const ul = document.getElementById('pccList');
                 ul.innerHTML = '';
-                if(list.length===0) ul.innerHTML = '<li style="padding:1rem; text-align:center; color:#6b7280;">No datasets. Upload file.</li>';
-                
                 list.forEach(d => {
                     const li = document.createElement('li');
                     li.className = `pcc-item ${state.currentPCC===d.id ? 'active' : ''}`;
@@ -498,24 +527,38 @@
             let results = [];
 
             if (state.currentType === 'H71D') {
-                // H71D Full Text Search
                 results = state.h71dData.filter(r => {
                     if(!q) return true;
+                    // H71D Search: Code, Name, Content
                     const txt = (r.airlineCode + r.airlineName + r.content + r.category).toUpperCase();
                     return txt.includes(q);
                 });
                 renderH71D(results, resArea);
             } else {
-                // B8BL Logic
+                // B8BL Search: Code, Name, Sheet Name
                 results = state.masterData.filter(r => {
                     if(!q) return true;
-                    const txt = (r['Airline'] + (r._sheetName||'') + (r._code||'')).toUpperCase();
-                    // Match code via map
-                    if(AIRLINE_CN_MAP[q]) {
-                         const mapName = AIRLINE_CN_MAP[q].toUpperCase();
-                         if(txt.includes(mapName)) return true;
+                    
+                    const code = (r._airlineCode || r['Validating Carrier'] || '').toUpperCase();
+                    const name = (r['Airline'] || '').toUpperCase();
+                    const sheet = (r._sheetName || '').toUpperCase();
+                    
+                    // 1. Direct Code match (e.g. "UA")
+                    if (code === q || code.includes(q)) return true;
+                    
+                    // 2. Direct Name match
+                    if (name.includes(q)) return true;
+                    
+                    // 3. Mapped match (Type "UA" -> Match "United")
+                    if (AIRLINE_CN_MAP[q]) {
+                        const fullMapName = AIRLINE_CN_MAP[q].toUpperCase();
+                        if (name.includes(fullMapName) || fullMapName.includes(name)) return true;
                     }
-                    return txt.includes(q);
+                    
+                    // 4. Reverse Mapped match (Type "United" -> Match "UA" code)
+                    // (Already handled by enrichment, if row has _airlineCode, simple includes works)
+                    
+                    return sheet.includes(q);
                 });
                 renderB8BL(results, resArea);
             }
@@ -529,7 +572,6 @@
             list.slice(0, 100).forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                
                 let tagClass = '';
                 if(item.category.includes('HKG')) tagClass = 'tag-hkg';
                 if(item.category.includes('SOTO')) tagClass = 'tag-soto';
@@ -565,11 +607,14 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 
-                // Title Priority: Sheet Name > Mapped Name > Airline Column
-                let title = item._sheetName || item.Airline;
-                if(!item._sheetName && item['Validating Carrier']) {
-                    const code = item['Validating Carrier'];
-                    title = `${code} - ${AIRLINE_CN_MAP[code] || item.Airline}`;
+                // Display Title Logic
+                let title = item._sheetName;
+                const code = item._airlineCode || item['Validating Carrier'];
+                const name = item['Airline'];
+                
+                if (!title) {
+                    if (code) title = `${code} - ${name}`;
+                    else title = name;
                 }
 
                 let comm = item['Commission rate Adult %'] || '0%';
@@ -580,14 +625,8 @@
                         <span class="card-airline">${title}</span>
                     </div>
                     <div class="card-body">
-                        <div class="data-row">
-                            <span class="data-label">Route</span>
-                            <span class="data-value value-highlight">${item.Origin||'ALL'} ➝ ${item.Destination||'ALL'}</span>
-                        </div>
-                        <div class="data-row">
-                            <span class="data-label">Cabin</span>
-                            <span class="data-value">${item.Cabin||'ALL'} / ${item.RBD||'ALL'}</span>
-                        </div>
+                        <div class="data-row"><span class="data-label">Route</span><span class="data-value value-highlight">${item.Origin||'ALL'} ➝ ${item.Destination||'ALL'}</span></div>
+                        <div class="data-row"><span class="data-label">Cabin</span><span class="data-value">${item.Cabin||'ALL'}</span></div>
                         <div class="commission-box">
                              <span class="comm-label">Commission</span>
                              <span class="comm-value">${comm}</span>
@@ -604,10 +643,18 @@
         window.openDetailB8BL = function(item) {
             const sheet = item._sheetName;
             document.getElementById('panelTitle').innerText = `${sheet || item.Airline}`;
-            
             let html = '<p style="padding:1rem; color:#666">No additional details found.</p>';
-            if (sheet && state.detailsMap[sheet]) {
-                const rows = state.detailsMap[sheet];
+            
+            // Try match
+            let rows = null;
+            if (sheet && state.detailsMap[sheet]) rows = state.detailsMap[sheet];
+            else {
+                // Fallback search in details keys
+                const key = Object.keys(state.detailsMap).find(k => k.includes(item.Airline));
+                if(key) rows = state.detailsMap[key];
+            }
+
+            if (rows) {
                 html = '<div class="detail-section"><table class="info-table">';
                 rows.forEach(r => {
                     html += '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>';
