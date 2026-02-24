@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commission Quick Viewer v4.6 (Ultimate Search & Display)</title>
+    <title>Commission Quick Viewer v4.7 (Standardized UI)</title>
     
     <!-- SheetJS with reliable fallback -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -93,7 +93,7 @@
         .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
         .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .card-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border-radius: 8px 8px 0 0; }
-        .card-airline { font-weight: 900; font-size: 1.25rem; color: var(--text-main); line-height: 1.3; display: block; letter-spacing: -0.02em; }
+        .card-airline { font-weight: 900; font-size: 1.2rem; color: var(--text-main); line-height: 1.3; display: block; letter-spacing: -0.01em; }
         .card-subtitle { font-size: 0.75rem; color: #6b7280; margin-top: 0.35rem; display: flex; align-items: center; gap: 0.25rem; }
         .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: bold; display: inline-block; }
         .card-dates { font-size: 0.75rem; color: var(--text-sub); text-align: right; background: #f9fafb; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
@@ -159,7 +159,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
-                <h2>Commission v4.6</h2>
+                <h2>Commission v4.7</h2>
                 <span class="badge">PRO</span>
             </div>
             
@@ -194,7 +194,7 @@
                     <div class="input-group flex-2">
                         <label id="lblAirline">Airline / 航司二字代码</label>
                         <!-- Added oninput for instant search -->
-                        <input type="text" id="inpAirline" placeholder="Code (e.g. CA, UA) or Name...">
+                        <input type="text" id="inpAirline" placeholder="Code (e.g. CA, UA, GA) or Name...">
                     </div>
                     <div class="input-group flex-1 b8bl-only">
                         <label>Origin</label>
@@ -276,21 +276,48 @@
 
     <!-- Logic -->
     <script>
-        const DB_NAME='CommissionViewerV4_6'; const DB_VERSION=1;
+        const DB_NAME='CommissionViewerV4_7'; const DB_VERSION=1;
         
-        // Comprehensive Mapping: Code -> Name
+        // Comprehensive Mapping: Extensively expanded mapping to guarantee code matches
         const AIRLINE_CN_MAP = {
-            "3U":"Sichuan Airlines四川航空", "8M":"Myanmar Airways", "AC":"Air Canada加拿大航空",
-            "CI":"China Airlines中华航空", "CX":"Cathay Pacific国泰航空", "CZ":"China Southern南方航空",
-            "EK":"Emirates阿联酋航空", "ET":"Ethiopian Airlines", "HU":"Hainan Airlines海南航空",
-            "JL":"Japan Airlines日本航空", "KE":"Korean Air大韩航空", "MH":"Malaysia Airlines",
-            "MU":"China Eastern东方航空", "NH":"ANA全日空", "NZ":"Air New Zealand",
-            "OZ":"Asiana Airlines韩亚航空", "PR":"Philippine Airlines菲律宾航空", "QF":"Qantas",
-            "QR":"Qatar Airways", "SQ":"Singapore Airlines新加坡航空", "TK":"Turkish Airlines土耳其航空",
-            "UA":"United Airlines美联航", "VS":"Virgin Atlantic", "WS":"WestJet西捷航空", "YP":"Air Premia",
-            "DL":"Delta Air Lines", "AA":"American Airlines美国航空", "AF":"Air France法国航空", "KL":"KLM",
-            "LH":"Lufthansa", "LX":"Swiss", "OS":"Austrian", "SN":"Brussels Airlines",
-            "BR":"EVA Air长荣航空", "MF":"Xiamen Airlines厦门航空", "B6":"JetBlue", "AS":"Alaska Airlines"
+            "2D":"Eastern Airlines", "2M":"Maya Island Air", "2T":"BermudAir",
+            "3U":"Sichuan Airlines四川航空", "4N":"Air North", "4Z":"Airlink",
+            "8M":"Myanmar Airways", "9V":"Avior Airlines", 
+            "AA":"American Airlines美国航空", "AC":"Air Canada加拿大航空", "AD":"Azul Linhas Aereas",
+            "AF":"Air France法国航空", "AM":"Aeromexico墨西哥航空", "AS":"Alaska Airlines阿拉斯加航空",
+            "AT":"Royal Air Maroc摩洛哥皇家航空", "AV":"Avianca哥伦比亚航空", "AW":"Africa World Airlines",
+            "AY":"Finnair芬兰航空", "AZ":"ITA Airways意大利航空", "B6":"JetBlue捷蓝航空",
+            "BA":"British Airways英国航空", "BF":"French Bee", "BI":"Royal Brunei汶莱皇家航空",
+            "BP":"Air Botswana", "BR":"EVA Air长荣航空", "BW":"Caribbean Airlines",
+            "CA":"Air China中国国际航空", "CG":"PNG Air", "CI":"China Airlines中华航空",
+            "CM":"Copa Airlines巴拿马航空", "CX":"Cathay Pacific国泰航空", "CZ":"China Southern南方航空",
+            "DE":"Condor神鹰航空", "DL":"Delta Air Lines达美航空", "DM":"Arajet",
+            "DT":"TAAG Angola Airlines", "EI":"Aer Lingus爱尔兰航空", "EK":"Emirates阿联酋航空",
+            "ET":"Ethiopian Airlines埃塞俄比亚航空", "EY":"Etihad Airways阿提哈德航空", 
+            "FI":"Icelandair冰岛航空", "FJ":"Fiji Airways斐济航空", "G3":"GOL Linhas Aereas",
+            "GA":"Garuda Indonesia印尼鹰航", "GF":"Gulf Air海湾航空", "GQ":"Sky Express天空快运",
+            "H1":"Hahn Air", "H2":"Sky Airlines", "HC":"Air Senegal", "HM":"Air Seychelles塞舌尔航空",
+            "HR":"Hahn Air", "HU":"Hainan Airlines海南航空", "HX":"Hong Kong Airlines香港航空",
+            "IB":"Iberia伊比利亚航空", "IE":"Solomon Airlines", "JL":"Japan Airlines日本航空",
+            "JX":"STARLUX Airlines星宇航空", "JY":"InterCaribbean", "KE":"Korean Air大韩航空",
+            "KL":"KLM荷兰皇家航空", "KP":"ASKY", "KQ":"Kenya Airways肯尼亚航空", 
+            "KU":"Kuwait Airways科威特航空", "LA":"LATAM Airlines拉美航空", "LH":"Lufthansa汉莎航空",
+            "LO":"LOT Polish Airlines波兰航空", "LX":"Swiss瑞士国际航空", "LY":"El Al Israel Airlines以色列航空",
+            "MD":"Air Madagascar马达加斯加航空", "MF":"Xiamen Airlines厦门航空", "MH":"Malaysia Airlines马来西亚航空",
+            "MS":"Egyptair埃及航空", "MU":"China Eastern东方航空", "NH":"ANA全日空",
+            "NO":"Neos SPA", "NZ":"Air New Zealand新西兰航空", "OB":"Boliviana de Aviacion",
+            "OS":"Austrian奥地利航空", "OZ":"Asiana Airlines韩亚航空", "P0":"Proflight Zambia",
+            "PB":"PAL Airlines", "PD":"Porter Airlines波特航空", "PR":"Philippine Airlines菲律宾航空",
+            "PW":"Precision Air", "PX":"Air Niugini", "PY":"Surinam Airways", "Q4":"Euro Airlines",
+            "QF":"Qantas Airways澳洲航空", "QR":"Qatar Airways卡塔尔航空", "RJ":"Royal Jordanian皇家约旦航空",
+            "S4":"SATA Azores Airlines", "S6":"Sunrise Airways", "SB":"Aircalin", 
+            "SK":"Scandinavian Airlines北欧航空", "SN":"Brussels Airlines布鲁塞尔航空", "SQ":"Singapore Airlines新加坡航空",
+            "SV":"Saudi Arabian Airlines沙特阿拉伯航空", "SZ":"Somon Air", "TC":"Air Tanzania",
+            "TK":"Turkish Airlines土耳其航空", "TM":"LAM Mozambique", "TN":"Air Tahiti Nui",
+            "TS":"Air Transat越洋航空", "UA":"United Airlines美联航", "UB":"Myanmar National",
+            "UL":"Srilankan Airlines斯里兰卡航空", "UP":"Bahamasair", "VS":"Virgin Atlantic维珍航空",
+            "W1":"FlexFlight", "W2":"FlexFlight", "WB":"RwandAir", "WS":"WestJet西捷航空",
+            "WY":"Oman Air阿曼航空", "YP":"Air Premia普莱米娅航空", "Z8":"Amaszonas", "ZH":"Shenzhen Airlines深圳航空"
         };
         
         let db;
@@ -548,8 +575,8 @@
                 // Sort Exact Code
                 if (q.length > 0) {
                     results.sort((a,b) => {
-                        const codeA = (a.airlineCode || '').toUpperCase();
-                        const codeB = (b.airlineCode || '').toUpperCase();
+                        const codeA = (a.airlineCode || '').split(/[,/]/)[0].trim().toUpperCase();
+                        const codeB = (b.airlineCode || '').split(/[,/]/)[0].trim().toUpperCase();
                         if (codeA === q && codeB !== q) return -1;
                         if (codeB === q && codeA !== q) return 1;
                         return 0;
@@ -571,7 +598,7 @@
                     // 2. Direct Name match
                     if (name.includes(q)) return true;
                     
-                    // 3. Mapped match (Type "UA" -> Match "United")
+                    // 3. Mapped match
                     if (AIRLINE_CN_MAP[q]) {
                         const fullMapName = AIRLINE_CN_MAP[q].toUpperCase();
                         const enName = fullMapName.replace(/[^\x00-\x7F]/g, "").trim();
@@ -585,8 +612,8 @@
                 // FORCE Exact Code Matches to Absolute Top
                 if (q.length > 0) {
                     results.sort((a,b) => {
-                        const codeA = (a._airlineCode || a['Validating Carrier'] || '').toUpperCase();
-                        const codeB = (b._airlineCode || b['Validating Carrier'] || '').toUpperCase();
+                        const codeA = (a._airlineCode || a['Validating Carrier'] || '').split(/[,/]/)[0].trim().toUpperCase();
+                        const codeB = (b._airlineCode || b['Validating Carrier'] || '').split(/[,/]/)[0].trim().toUpperCase();
                         
                         if (codeA === q && codeB !== q) return -1;
                         if (codeB === q && codeA !== q) return 1;
@@ -602,6 +629,8 @@
             document.getElementById('resCount').innerText = results.length;
         }
 
+        // --- Standardized Title Generator ---
+        // Generates CA - AIR CHINA format uniformly
         function getStandardizedTitle(item, mode) {
             let code = '';
             let rawName = '';
@@ -613,16 +642,25 @@
             } else {
                 code = (item._airlineCode || item['Validating Carrier'] || '').trim().toUpperCase();
                 rawName = item['Airline'] || '';
-                if (code && AIRLINE_CN_MAP[code]) {
-                    rawName = AIRLINE_CN_MAP[code];
+                
+                // Use dictionary name if primary code exists
+                let primaryCode = code.split(/[,/]/)[0].trim();
+                if (primaryCode && AIRLINE_CN_MAP[primaryCode]) {
+                    rawName = AIRLINE_CN_MAP[primaryCode];
                 }
+                
+                // Show sheet name as sub-title if it's uniquely helpful
                 if (item._sheetName && item._sheetName !== item['Airline']) {
                     subtitle = `<span class="card-subtitle">📄 ${item._sheetName}</span>`;
                 }
             }
 
+            // Strip Chinese characters to get pure English name
             const enName = rawName.replace(/[^\x00-\x7F]/g, "").trim().toUpperCase();
-            const mainTitle = code ? `${code} / ${enName}` : enName;
+            
+            // Format: CODE - EN NAME (Cap at 15 chars for code if it's a huge combination)
+            let displayCode = code.length > 15 ? code.substring(0, 15) + '...' : code;
+            const mainTitle = displayCode ? `${displayCode} - ${enName}` : enName;
 
             return { mainTitle, subtitle };
         }
