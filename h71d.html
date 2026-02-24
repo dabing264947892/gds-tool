@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commission Quick Viewer v4.4 (Instant Search Fix)</title>
+    <title>Commission Quick Viewer v4.5 (Ultimate Search)</title>
     
     <!-- SheetJS with reliable fallback -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -73,8 +73,8 @@
         .input-group { display: flex; flex-direction: column; }
         .flex-2 { flex: 2; } .flex-1 { flex: 1; }
         .input-group label { font-size: 0.75rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-sub); text-transform: uppercase; }
-        .input-group input { padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
-        .input-group input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
+        .input-group input { padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; outline: none; transition: border 0.2s; }
+        .input-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
 
         .advanced-details { flex: 1; }
         .advanced-details summary { cursor: pointer; font-size: 0.85rem; color: var(--primary); font-weight: 500; user-select: none; }
@@ -87,7 +87,7 @@
 
         /* Results */
         .results-info { padding: 0.5rem 1.5rem; background: #eefff6; color: #065f46; font-size: 0.85rem; border-bottom: 1px solid #d1fae5; }
-        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; align-content: start; }
+        .results-grid { padding: 1.5rem; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; align-content: start; }
 
         /* Cards */
         .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
@@ -158,8 +158,8 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
-                <h2>Commission v4.4</h2>
-                <span class="badge">Fixes</span>
+                <h2>Commission v4.5</h2>
+                <span class="badge">PRO</span>
             </div>
             
             <div class="sidebar-section">
@@ -191,9 +191,8 @@
             <header class="search-header">
                 <div class="search-row primary">
                     <div class="input-group flex-2">
-                        <label id="lblAirline">Airline / 航司 (Type to search)</label>
-                        <!-- Added oninput for instant search -->
-                        <input type="text" id="inpAirline" placeholder="Code (e.g. CA, UA) or Name..." oninput="handleSearchInput(this.value)">
+                        <label id="lblAirline">Airline / 航司二字代码</label>
+                        <input type="text" id="inpAirline" placeholder="Code (e.g. UA, CA, MU) or Name...">
                     </div>
                     <div class="input-group flex-1 b8bl-only">
                         <label>Origin</label>
@@ -275,9 +274,9 @@
 
     <!-- Logic -->
     <script>
-        const DB_NAME='CommissionViewerV4_4'; const DB_VERSION=1;
+        const DB_NAME='CommissionViewerV4_5'; const DB_VERSION=1;
         
-        // Comprehensive Mapping: Code -> Name (and vice versa via lookup)
+        // Comprehensive Mapping: Code -> Name
         const AIRLINE_CN_MAP = {
             "3U":"Sichuan Airlines四川航空", "8M":"Myanmar Airways", "AC":"Air Canada加拿大航空",
             "CI":"China Airlines中华航空", "CX":"Cathay Pacific国泰航空", "CZ":"China Southern南方航空",
@@ -294,7 +293,7 @@
         
         let db;
         let state = { currentPCC:null, currentType:'B8BL', allDatasets:[], masterData:[], h71dData:[], summaryData:[], detailsMap:{}, airlineCodeMap:{} };
-        let searchTimeout = null; // For debounce
+        let searchTimeout = null; 
 
         // --- Init DB ---
         function initDB() {
@@ -438,7 +437,16 @@
                 // 1. Try to find Sheet Name from Summary
                 let matchedSummary = null;
                 if (summary) {
-                    matchedSummary = summary.find(s => (s['Sheet Name']||'').toUpperCase().includes(mAlUpper));
+                    matchedSummary = summary.find(s => {
+                        const sSheet = (s['Sheet Name']||'').toUpperCase();
+                        const sCode = (s['Airline Code']||'').toUpperCase();
+                        // Sometimes sheet name is "MU - China Eastern Airli" and mAl is "China Eastern Airlines"
+                        if (sSheet.includes(mAlUpper)) return true;
+                        // Extract airline name part from sheet name (e.g., "Air Canada" from "AC - Air Canada (1)")
+                        const sheetNamePart = sSheet.split(' - ')[1] ? sSheet.split(' - ')[1].replace(/\(\d+\)/g,'').trim() : sSheet;
+                        if (sheetNamePart && mAlUpper.includes(sheetNamePart)) return true;
+                        return false;
+                    });
                 }
                 
                 if (matchedSummary) {
@@ -450,7 +458,9 @@
                 if (!row._airlineCode) {
                     for (const [code, name] of Object.entries(AIRLINE_CN_MAP)) {
                         const nameUpper = name.toUpperCase();
-                        if (nameUpper.includes(mAlUpper) || mAlUpper.includes(nameUpper)) {
+                        const cleanMapName = nameUpper.replace(/[^\x00-\x7F]/g, "").trim(); // Remove Chinese chars for strict English match
+                        
+                        if (nameUpper.includes(mAlUpper) || mAlUpper.includes(nameUpper) || (cleanMapName && mAlUpper.includes(cleanMapName))) {
                             row._airlineCode = code;
                             break;
                         }
@@ -516,14 +526,6 @@
             };
         }
 
-        // --- Instant Search Debounce ---
-        function handleSearchInput(val) {
-            if (searchTimeout) clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                handleSearch();
-            }, 300);
-        }
-
         // --- Search ---
         function handleSearch() {
             const q = document.getElementById('inpAirline').value.toUpperCase().trim();
@@ -566,12 +568,15 @@
                 });
                 
                 // Sort to put Exact Code Matches at Top
-                if (q.length > 0 && q.length < 4) {
+                if (q.length > 0) {
                     results.sort((a,b) => {
                         const codeA = (a._airlineCode || a['Validating Carrier'] || '').toUpperCase();
                         const codeB = (b._airlineCode || b['Validating Carrier'] || '').toUpperCase();
+                        
+                        // Exact Code matches win completely
                         if (codeA === q && codeB !== q) return -1;
                         if (codeB === q && codeA !== q) return 1;
+                        
                         return 0;
                     });
                 }
@@ -704,9 +709,20 @@
             e.target.value = '';
         });
 
-        document.getElementById('btnSearch').onclick = handleSearch;
-        // Keep enter key support just in case
-        document.getElementById('inpAirline').onkeypress = (e) => e.key==='Enter' && handleSearch();
+        document.getElementById('btnSearch').addEventListener('click', handleSearch);
+        
+        // INSTANT SEARCH FIX
+        document.getElementById('inpAirline').addEventListener('input', (e) => {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                handleSearch();
+            }, 300);
+        });
+
+        // Other bindings
+        document.getElementById('inpOrigin').addEventListener('input', () => { if (searchTimeout) clearTimeout(searchTimeout); searchTimeout = setTimeout(handleSearch, 300); });
+        document.getElementById('inpDest').addEventListener('input', () => { if (searchTimeout) clearTimeout(searchTimeout); searchTimeout = setTimeout(handleSearch, 300); });
+
         document.getElementById('btnRefreshDB').onclick = refreshSidebar;
         window.closePanel = (id) => { document.getElementById(id).classList.remove('open'); document.getElementById('overlay').classList.remove('open'); };
         window.closeAllPanels = () => { closePanel('detailPanel'); closePanel('canvasPanel'); };
