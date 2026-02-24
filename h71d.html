@@ -693,11 +693,102 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button class="btn btn-sm btn-detail-hl" style="width:100%" onclick='openDetailB8BL(${JSON.stringify(item).replace(/'/g, "&#39;")})'>Details / 详情</button>
+                        <button class="btn btn-sm btn-detail-hl btn-detail">Details / 详情</button>
+                        <button class="btn btn-sm btn-primary btn-canvas">Checklist</button>
                     </div>
                 `;
+                
+                card.querySelector('.btn-detail').onclick = () => openDetailB8BL(item);
+                card.querySelector('.btn-canvas').onclick = () => {
+                    document.getElementById('canvasPanel').classList.add('open');
+                    document.getElementById('overlay').classList.add('open');
+                    renderCanvas(item, 'previewCanvas');
+                };
+                
                 container.appendChild(card);
             });
+        }
+
+        function renderCanvas(item, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = 800;
+            const height = 600;
+            canvas.width = width;
+            canvas.height = height;
+
+            const colors = { bg: '#ffffff', header: '#1e3a8a', textHeader: '#ffffff', textLabel: '#6b7280', textValue: '#111827', line: '#e5e7eb', accent: '#f59e0b' };
+
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = colors.header;
+            ctx.fillRect(0, 0, width, 100);
+            ctx.fillStyle = colors.textHeader;
+            ctx.font = 'bold 32px Arial';
+            ctx.fillText('Commission Checklist', 40, 60);
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#93c5fd';
+            ctx.fillText(`PCC: ${state.currentPCC || 'N/A'} | Date: ${new Date().toLocaleDateString()}`, 40, 85);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fillRect(550, 20, 210, 60);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            
+            const titleData = getStandardizedTitle(item, 'B8BL');
+            let airlineDisplay = titleData.mainTitle;
+            
+            ctx.fillText(airlineDisplay.substring(0, 20), 655, 58);
+            ctx.textAlign = 'left';
+
+            let y = 150;
+            const leftColX = 40;
+            const leftValX = 200;
+            
+            let comm = item['Commission rate Adult %'] || item['Commission rate Adult Amount'] || '0%';
+            if(!comm.includes('%') && !comm.includes('$') && comm !== '0%') comm += '%';
+
+            const fields = [
+                { label: 'Airline', value: airlineDisplay },
+                { label: 'Origin', value: item.Origin || 'ALL' },
+                { label: 'Destination', value: item.Destination || 'ALL' },
+                { label: 'Commission', value: comm },
+                { label: 'Cabin / RBD', value: `${item.Cabin || 'ALL'} / ${item.RBD || 'ALL'}` },
+                { label: 'Tour Code', value: item['Tour Code'] || 'N/A' },
+                { label: 'Ticket Desig.', value: item['Ticket Designator'] || 'N/A' },
+                { label: 'Ticketing Date', value: `${item['First Ticketing Date'] || 'N/A'} to ${item['Last Ticketing Date'] || 'UFN'}` },
+                { label: 'Fare Class', value: item['Fare Class'] || 'ALL' }
+            ];
+
+            fields.forEach((field) => {
+                ctx.fillStyle = colors.textLabel;
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText(field.label.toUpperCase(), leftColX, y);
+
+                ctx.fillStyle = colors.textValue;
+                ctx.font = '18px Arial';
+                let val = String(field.value || '-');
+                if (val.length > 55) val = val.substring(0, 52) + '...';
+                ctx.fillText(val, leftValX, y);
+
+                ctx.beginPath();
+                ctx.moveTo(leftColX, y + 15);
+                ctx.lineTo(width - 40, y + 15);
+                ctx.strokeStyle = colors.line;
+                ctx.stroke();
+                y += 45;
+            });
+
+            ctx.fillStyle = '#fef2f2';
+            ctx.fillRect(40, height - 80, width - 80, 50);
+            ctx.strokeStyle = '#fecaca';
+            ctx.strokeRect(40, height - 80, width - 80, 50);
+            ctx.fillStyle = '#b91c1c';
+            ctx.font = 'italic 13px Arial';
+            ctx.fillText("IMPORTANT: Verify details in GDS before ticketing. This document is for reference only.", 60, height - 50);
         }
 
         window.openDetailB8BL = function(item) {
@@ -763,6 +854,17 @@
         document.getElementById('inpDest').addEventListener('input', () => { if (searchTimeout) clearTimeout(searchTimeout); searchTimeout = setTimeout(handleSearch, 300); });
 
         document.getElementById('btnRefreshDB').onclick = refreshSidebar;
+        
+        document.getElementById('btnDownloadCanvas').addEventListener('click', () => {
+            const canvas = document.getElementById('previewCanvas');
+            if (canvas) {
+                const link = document.createElement('a');
+                link.download = `Checklist-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
+        });
+
         window.closePanel = (id) => { document.getElementById(id).classList.remove('open'); document.getElementById('overlay').classList.remove('open'); };
         window.closeAllPanels = () => { closePanel('detailPanel'); closePanel('canvasPanel'); };
 
