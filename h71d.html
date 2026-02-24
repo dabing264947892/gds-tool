@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Commission Quick Viewer v4.5 (Ultimate Search)</title>
+    <title>Commission Quick Viewer v4.6 (Ultimate Search & Display)</title>
     
     <!-- SheetJS with reliable fallback -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -93,8 +93,9 @@
         .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
         .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .card-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; background: #fff; border-radius: 8px 8px 0 0; }
-        .card-airline { font-weight: 800; font-size: 1.15rem; color: var(--text-main); line-height: 1.3; display: block; }
-        .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: normal; margin-left: 6px; }
+        .card-airline { font-weight: 900; font-size: 1.25rem; color: var(--text-main); line-height: 1.3; display: block; letter-spacing: -0.02em; }
+        .card-subtitle { font-size: 0.75rem; color: #6b7280; margin-top: 0.35rem; display: flex; align-items: center; gap: 0.25rem; }
+        .card-pcc-tag { font-size: 0.7rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; vertical-align: middle; color: #4b5563; font-weight: bold; display: inline-block; }
         .card-dates { font-size: 0.75rem; color: var(--text-sub); text-align: right; background: #f9fafb; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
 
         .card-body { padding: 1rem; flex: 1; font-size: 0.9rem; }
@@ -158,7 +159,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
-                <h2>Commission v4.5</h2>
+                <h2>Commission v4.6</h2>
                 <span class="badge">PRO</span>
             </div>
             
@@ -192,7 +193,8 @@
                 <div class="search-row primary">
                     <div class="input-group flex-2">
                         <label id="lblAirline">Airline / 航司二字代码</label>
-                        <input type="text" id="inpAirline" placeholder="Code (e.g. UA, CA, MU) or Name...">
+                        <!-- Added oninput for instant search -->
+                        <input type="text" id="inpAirline" placeholder="Code (e.g. CA, UA) or Name...">
                     </div>
                     <div class="input-group flex-1 b8bl-only">
                         <label>Origin</label>
@@ -274,7 +276,7 @@
 
     <!-- Logic -->
     <script>
-        const DB_NAME='CommissionViewerV4_5'; const DB_VERSION=1;
+        const DB_NAME='CommissionViewerV4_6'; const DB_VERSION=1;
         
         // Comprehensive Mapping: Code -> Name
         const AIRLINE_CN_MAP = {
@@ -283,12 +285,12 @@
             "EK":"Emirates阿联酋航空", "ET":"Ethiopian Airlines", "HU":"Hainan Airlines海南航空",
             "JL":"Japan Airlines日本航空", "KE":"Korean Air大韩航空", "MH":"Malaysia Airlines",
             "MU":"China Eastern东方航空", "NH":"ANA全日空", "NZ":"Air New Zealand",
-            "OZ":"Asiana Airlines韩亚航空", "PR":"Philippine Airlines", "QF":"Qantas",
-            "QR":"Qatar Airways", "SQ":"Singapore Airlines", "TK":"Turkish Airlines",
-            "UA":"United Airlines美联航", "VS":"Virgin Atlantic", "WS":"WestJet", "YP":"Air Premia",
-            "DL":"Delta Air Lines", "AA":"American Airlines", "AF":"Air France", "KL":"KLM",
+            "OZ":"Asiana Airlines韩亚航空", "PR":"Philippine Airlines菲律宾航空", "QF":"Qantas",
+            "QR":"Qatar Airways", "SQ":"Singapore Airlines新加坡航空", "TK":"Turkish Airlines土耳其航空",
+            "UA":"United Airlines美联航", "VS":"Virgin Atlantic", "WS":"WestJet西捷航空", "YP":"Air Premia",
+            "DL":"Delta Air Lines", "AA":"American Airlines美国航空", "AF":"Air France法国航空", "KL":"KLM",
             "LH":"Lufthansa", "LX":"Swiss", "OS":"Austrian", "SN":"Brussels Airlines",
-            "BR":"EVA Air", "MF":"Xiamen Airlines", "B6":"JetBlue", "AS":"Alaska Airlines"
+            "BR":"EVA Air长荣航空", "MF":"Xiamen Airlines厦门航空", "B6":"JetBlue", "AS":"Alaska Airlines"
         };
         
         let db;
@@ -439,10 +441,7 @@
                 if (summary) {
                     matchedSummary = summary.find(s => {
                         const sSheet = (s['Sheet Name']||'').toUpperCase();
-                        const sCode = (s['Airline Code']||'').toUpperCase();
-                        // Sometimes sheet name is "MU - China Eastern Airli" and mAl is "China Eastern Airlines"
                         if (sSheet.includes(mAlUpper)) return true;
-                        // Extract airline name part from sheet name (e.g., "Air Canada" from "AC - Air Canada (1)")
                         const sheetNamePart = sSheet.split(' - ')[1] ? sSheet.split(' - ')[1].replace(/\(\d+\)/g,'').trim() : sSheet;
                         if (sheetNamePart && mAlUpper.includes(sheetNamePart)) return true;
                         return false;
@@ -458,7 +457,7 @@
                 if (!row._airlineCode) {
                     for (const [code, name] of Object.entries(AIRLINE_CN_MAP)) {
                         const nameUpper = name.toUpperCase();
-                        const cleanMapName = nameUpper.replace(/[^\x00-\x7F]/g, "").trim(); // Remove Chinese chars for strict English match
+                        const cleanMapName = nameUpper.replace(/[^\x00-\x7F]/g, "").trim(); 
                         
                         if (nameUpper.includes(mAlUpper) || mAlUpper.includes(nameUpper) || (cleanMapName && mAlUpper.includes(cleanMapName))) {
                             row._airlineCode = code;
@@ -537,8 +536,25 @@
                     if(!q) return true;
                     // H71D Search: Code, Name, Content
                     const txt = (r.airlineCode + r.airlineName + r.content + r.category).toUpperCase();
+                    
+                    if (AIRLINE_CN_MAP[q]) {
+                        const enName = AIRLINE_CN_MAP[q].replace(/[^\x00-\x7F]/g, "").trim().toUpperCase();
+                        if (r.airlineCode === q || r.airlineName.toUpperCase().includes(enName)) return true;
+                    }
+                    
                     return txt.includes(q);
                 });
+                
+                // Sort Exact Code
+                if (q.length > 0) {
+                    results.sort((a,b) => {
+                        const codeA = (a.airlineCode || '').toUpperCase();
+                        const codeB = (b.airlineCode || '').toUpperCase();
+                        if (codeA === q && codeB !== q) return -1;
+                        if (codeB === q && codeA !== q) return 1;
+                        return 0;
+                    });
+                }
                 renderH71D(results, resArea);
             } else {
                 // B8BL Search: Code, Name, Sheet Name
@@ -549,7 +565,7 @@
                     const name = (r['Airline'] || '').toUpperCase();
                     const sheet = (r._sheetName || '').toUpperCase();
                     
-                    // 1. Direct Code match (e.g. "UA")
+                    // 1. Direct Code match
                     if (code === q || code.includes(q)) return true;
                     
                     // 2. Direct Name match
@@ -557,7 +573,6 @@
                     
                     // 3. Mapped match (Type "UA" -> Match "United")
                     if (AIRLINE_CN_MAP[q]) {
-                        // Extract just English part from map "CHINA EASTERN东方航空" -> "CHINA EASTERN"
                         const fullMapName = AIRLINE_CN_MAP[q].toUpperCase();
                         const enName = fullMapName.replace(/[^\x00-\x7F]/g, "").trim();
                         if (name.includes(enName) || enName.includes(name)) return true;
@@ -567,13 +582,12 @@
                     return sheet.includes(q);
                 });
                 
-                // Sort to put Exact Code Matches at Top
+                // FORCE Exact Code Matches to Absolute Top
                 if (q.length > 0) {
                     results.sort((a,b) => {
                         const codeA = (a._airlineCode || a['Validating Carrier'] || '').toUpperCase();
                         const codeB = (b._airlineCode || b['Validating Carrier'] || '').toUpperCase();
                         
-                        // Exact Code matches win completely
                         if (codeA === q && codeB !== q) return -1;
                         if (codeB === q && codeA !== q) return 1;
                         
@@ -588,6 +602,31 @@
             document.getElementById('resCount').innerText = results.length;
         }
 
+        function getStandardizedTitle(item, mode) {
+            let code = '';
+            let rawName = '';
+            let subtitle = '';
+
+            if (mode === 'H71D') {
+                code = (item.airlineCode || '').trim().toUpperCase();
+                rawName = item.airlineName || '';
+            } else {
+                code = (item._airlineCode || item['Validating Carrier'] || '').trim().toUpperCase();
+                rawName = item['Airline'] || '';
+                if (code && AIRLINE_CN_MAP[code]) {
+                    rawName = AIRLINE_CN_MAP[code];
+                }
+                if (item._sheetName && item._sheetName !== item['Airline']) {
+                    subtitle = `<span class="card-subtitle">📄 ${item._sheetName}</span>`;
+                }
+            }
+
+            const enName = rawName.replace(/[^\x00-\x7F]/g, "").trim().toUpperCase();
+            const mainTitle = code ? `${code} / ${enName}` : enName;
+
+            return { mainTitle, subtitle };
+        }
+
         function renderH71D(list, container) {
             container.innerHTML = '';
             list.slice(0, 100).forEach(item => {
@@ -597,10 +636,13 @@
                 if(item.category.includes('HKG')) tagClass = 'tag-hkg';
                 if(item.category.includes('SOTO')) tagClass = 'tag-soto';
                 
+                const titleData = getStandardizedTitle(item, 'H71D');
+
                 card.innerHTML = `
                     <div class="card-header">
                         <div>
-                            <span class="card-airline">${item.airlineName}</span>
+                            <span class="card-airline">${titleData.mainTitle}</span>
+                            <span class="card-pcc-tag">${state.currentPCC}</span>
                             ${tagClass ? `<span class="h71d-tag ${tagClass}">${item.category}</span>` : ''}
                         </div>
                     </div>
@@ -628,25 +670,19 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 
-                // Display Title Logic
-                let title = item._sheetName;
-                const code = item._airlineCode || item['Validating Carrier'];
-                const name = item['Airline'];
-                
-                if (!title) {
-                    if (code) title = `${code} - ${name}`;
-                    else title = name;
-                } else if (code && !title.startsWith(code)) {
-                    // Prepend code if not present in sheet name for clarity
-                    title = `${code} - ${title}`;
-                }
+                const titleData = getStandardizedTitle(item, 'B8BL');
+                const displayDate = (item['Last Ticketing Date'] || 'UFN').includes('2999') ? 'UFN' : (item['Last Ticketing Date'] || 'UFN');
 
-                let comm = item['Commission rate Adult %'] || '0%';
-                if(!comm.includes('%')) comm += '%';
+                let comm = item['Commission rate Adult %'] || item['Commission rate Adult Amount'] || '0%';
+                if(!comm.includes('%') && !comm.includes('$') && comm !== '0%') comm += '%';
 
                 card.innerHTML = `
                     <div class="card-header">
-                        <span class="card-airline">${title}</span>
+                        <div>
+                            <span class="card-airline">${titleData.mainTitle}</span>
+                            ${titleData.subtitle}
+                        </div>
+                        <div class="card-dates">Ticket By:<br><b>${displayDate}</b></div>
                     </div>
                     <div class="card-body">
                         <div class="data-row"><span class="data-label">Route</span><span class="data-value value-highlight">${item.Origin||'ALL'} ➝ ${item.Destination||'ALL'}</span></div>
@@ -666,7 +702,10 @@
 
         window.openDetailB8BL = function(item) {
             const sheet = item._sheetName;
-            document.getElementById('panelTitle').innerText = `${sheet || item.Airline}`;
+            const titleData = getStandardizedTitle(item, 'B8BL');
+            
+            document.getElementById('panelTitle').innerText = `${titleData.mainTitle} (${state.currentPCC})`;
+            
             let html = '<p style="padding:1rem; color:#666">No additional details found.</p>';
             
             // Try match
@@ -716,7 +755,7 @@
             if (searchTimeout) clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 handleSearch();
-            }, 300);
+            }, 250);
         });
 
         // Other bindings
