@@ -1,0 +1,819 @@
+ <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>酒店团队申请表格 | 会奖·旅游·体育</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #eef2f7;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 2rem 1rem;
+            color: #1a2c3e;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .form-header {
+            background: linear-gradient(135deg, #1e466e 0%, #0f2c44 100%);
+            padding: 2rem 2rem 1.8rem;
+            color: white;
+        }
+
+        .form-header h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-header p {
+            opacity: 0.85;
+            font-size: 1rem;
+            margin-top: 0.3rem;
+        }
+
+        .form-body {
+            padding: 2rem 2rem 2rem;
+        }
+
+        .section {
+            background: #f9fafc;
+            border-radius: 24px;
+            padding: 1.5rem 1.8rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e9edf2;
+            transition: box-shadow 0.2s;
+        }
+
+        .section-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #1f4e79;
+            border-left: 5px solid #2b7a62;
+            padding-left: 15px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #2c5a7a;
+        }
+
+        .required:after {
+            content: "*";
+            color: #dc4c4c;
+            margin-left: 4px;
+        }
+
+        input, select, textarea {
+            padding: 0.8rem 1rem;
+            border: 1px solid #cfdfed;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            background: white;
+            transition: 0.2s;
+            outline: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: #2b7a62;
+            box-shadow: 0 0 0 3px rgba(43, 122, 98, 0.2);
+        }
+
+        .hint {
+            font-size: 0.7rem;
+            color: #5e7e9e;
+            margin-top: 0.2rem;
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            align-items: center;
+            margin-top: 0.3rem;
+        }
+
+        .radio-item, .check-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .radio-item input, .check-item input {
+            width: 18px;
+            height: 18px;
+            accent-color: #2b7a62;
+        }
+
+        .radio-item label, .check-item label {
+            text-transform: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        /* 房型专用区块 */
+        .room-stats-grid {
+            background: white;
+            border-radius: 20px;
+            padding: 1rem 1.2rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1rem;
+        }
+        .room-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .room-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fefefe;
+            padding: 0.5rem 1rem;
+            border-radius: 32px;
+            border: 1px solid #e2edf2;
+        }
+        .room-item span:first-child {
+            font-weight: 600;
+            min-width: 70px;
+        }
+        .room-item input {
+            width: 85px;
+            padding: 0.5rem;
+            text-align: center;
+        }
+        .other-room-flex {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            background: #fefefe;
+            padding: 0.5rem 1rem;
+            border-radius: 32px;
+            border: 1px solid #e2edf2;
+            flex: 1;
+        }
+        .other-room-flex input:first-of-type {
+            width: 140px;
+        }
+        .other-room-flex input:nth-of-type(2) {
+            width: 85px;
+            text-align: center;
+        }
+        .room-remark-input {
+            margin-top: 10px;
+            margin-left: 0;
+            width: 100%;
+        }
+        .room-remark-input input {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+        }
+        .inline-badge {
+            font-size: 0.7rem;
+            color: #2b7a62;
+            background: #e6f4ef;
+            border-radius: 20px;
+            padding: 0.2rem 0.8rem;
+        }
+
+        /* 早餐模块新样式 */
+        .breakfast-module {
+            background: white;
+            border-radius: 20px;
+            padding: 1rem 1.2rem;
+            border: 1px solid #e2e8f0;
+        }
+        .breakfast-options {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+        .breakfast-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f1f5f9;
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+        .breakfast-tag.active {
+            background: #2b7a62;
+            color: white;
+            border-color: #2b7a62;
+        }
+        .breakfast-tag.active label {
+            color: white;
+        }
+        .breakfast-tag input {
+            display: none;
+        }
+        .breakfast-tag label {
+            text-transform: none;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        button {
+            background: #1f5e4c;
+            border: none;
+            padding: 0.9rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            max-width: 280px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            border: 1px solid transparent;
+        }
+
+        button:hover {
+            background: #0f4235;
+            transform: translateY(-2px);
+        }
+
+        .btn-copy {
+            background: #2c5a7a;
+        }
+        .btn-copy:hover {
+            background: #1f4460;
+        }
+
+        .result-area {
+            margin-top: 2rem;
+            background: #ecf3f0;
+            border-radius: 28px;
+            padding: 1.5rem;
+            display: none;
+        }
+
+        .result-area.show {
+            display: block;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .result-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .copy-btn-small {
+            background: #2b7a62;
+            padding: 0.5rem 1.2rem;
+            font-size: 0.8rem;
+            max-width: 140px;
+            border-radius: 40px;
+        }
+        pre {
+            background: #ffffffd9;
+            padding: 1.2rem;
+            border-radius: 20px;
+            overflow-x: auto;
+            font-family: 'Courier New', 'SF Mono', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border-left: 4px solid #2b7a62;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 680px) {
+            .form-body {
+                padding: 1.2rem;
+            }
+            .section {
+                padding: 1.2rem;
+            }
+            .btn-group {
+                justify-content: center;
+            }
+            button {
+                max-width: 100%;
+            }
+            .room-item {
+                flex-wrap: wrap;
+            }
+        }
+
+        .toast-msg {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e2f3a;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .toast-msg.show-toast {
+            opacity: 1;
+        }
+        hr {
+            margin: 1rem 0;
+            border: 0;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>🏨 酒店团队申请表格</h1>
+            <p>会奖 · 旅游 · 体育 · 商务 | 精准需求，一站提交</p>
+        </div>
+        <div class="form-body">
+            <form id="teamBookingForm">
+                <!-- 基础信息 -->
+                <div class="section">
+                    <div class="section-title">
+                        <i>📋</i> 团队信息
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label class="required">团队名称</label>
+                            <input type="text" id="teamName" placeholder="例：Asia MICE Elite / 东京会奖团" value="东京会奖团">
+                        </div>
+                        <div class="form-field">
+                            <label class="required">团队类型</label>
+                            <div class="radio-group">
+                                <div class="radio-item"><input type="radio" name="teamType" value="会奖" id="typeMice" checked> <label for="typeMice">✨ 会奖 (MICE)</label></div>
+                                <div class="radio-item"><input type="radio" name="teamType" value="旅游" id="typeTravel"> <label for="typeTravel">🌴 旅游</label></div>
+                                <div class="radio-item"><input type="radio" name="teamType" value="体育" id="typeSport"> <label for="typeSport">⚽ 体育</label></div>
+                                <div class="radio-item"><input type="radio" name="teamType" value="商务考察" id="typeBiz"> <label for="typeBiz">🏢 商务考察</label></div>
+                                <div class="radio-item"><input type="radio" name="teamType" value="研学/培训" id="typeStudy"> <label for="typeStudy">📚 研学/培训</label></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 房型数量 & 早餐 完全按照新结构重构 -->
+                <div class="section">
+                    <div class="section-title">
+                        <i>🛏️</i> 房型数量 & 早餐
+                    </div>
+                    <div class="form-field full-width">
+                        <!-- 入住人数 + 入住时间 (两列布局) -->
+                        <div class="form-grid" style="margin-bottom: 1.2rem;">
+                            <div class="form-field">
+                                <label class="required">👥 入住人数</label>
+                                <input type="number" id="totalOccupancy" min="1" value="28" step="1" placeholder="总人数">
+                                <div class="hint">团队总人数（含领队/导游）</div>
+                            </div>
+                            <div class="form-field">
+                                <label class="required">📅 入住时间</label>
+                                <input type="text" id="stayPeriod" placeholder="例：2025年6月10日 - 2025年6月13日" value="2025年6月10日 - 2025年6月13日">
+                                <div class="hint">格式：开始日期 - 结束日期</div>
+                            </div>
+                        </div>
+
+                        <!-- 房型区块：大床房，双床房，其他（自由文本+数量+备注） -->
+                        <label>🏨 房型需求</label>
+                        <div class="room-stats-grid">
+                            <div class="room-row">
+                                <div class="room-item">
+                                    <span>🛌 大床房</span>
+                                    <input type="number" id="kingRoomQty" min="0" value="8" step="1"> <span>间</span>
+                                </div>
+                                <div class="room-item">
+                                    <span>🛏️ 双床房</span>
+                                    <input type="number" id="twinRoomQty" min="0" value="12" step="1"> <span>间</span>
+                                </div>
+                            </div>
+                            <div class="room-row">
+                                <div class="other-room-flex">
+                                    <span>🏷️ 其他房型</span>
+                                    <input type="text" id="otherRoomTypeName" placeholder="房型名称（如家庭房/连通房）" value="连通房" style="flex:1; min-width:120px;">
+                                    <input type="number" id="otherRoomQty" min="0" value="2" step="1" placeholder="间数" style="width:85px;"> <span>间</span>
+                                </div>
+                            </div>
+                            <div class="room-remark-input">
+                                <input type="text" id="otherRoomRemark" placeholder="其他房型备注（楼层、特殊要求等）" value="需连通房，方便团队领队协调">
+                                <div class="hint">如有家庭房、无障碍房或其他特殊房型，请在此注明具体需求</div>
+                            </div>
+                        </div>
+
+                        <!-- 早餐模块：需要含早（每人一份） / 无需含早（自费） 采用卡片式切换 -->
+                        <label>🍽️ 早餐方案</label>
+                        <div class="breakfast-module">
+                            <div class="breakfast-options" id="breakfastToggleGroup">
+                                <div class="breakfast-tag" data-value="need">
+                                    <input type="radio" name="breakfastPlan" value="需要含早（每人一份）" id="breakfastNeed" checked>
+                                    <label for="breakfastNeed">✅ 需要含早（每人一份）</label>
+                                </div>
+                                <div class="breakfast-tag" data-value="noneed">
+                                    <input type="radio" name="breakfastPlan" value="无需含早（自费）" id="breakfastNoNeed">
+                                    <label for="breakfastNoNeed">❌ 无需含早（自费）</label>
+                                </div>
+                            </div>
+                            <div class="hint" style="margin-top: 12px;">※ 含早方案按实际入住人数每日提供早餐；自费方案酒店餐厅可现场购买。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 地点 + 期望酒店 + 预算 -->
+                <div class="section">
+                    <div class="section-title">
+                        <i>📍</i> 位置与预算
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-field full-width">
+                            <label class="required">地点 (城市+区域/地标)</label>
+                            <input type="text" id="locationTarget" placeholder="例：东京都千代田区/皇居周边" value="东京都千代田区/皇居周边，靠近东京站" required>
+                        </div>
+                        <div class="form-field">
+                            <label>期望酒店 (名称/品牌)</label>
+                            <input type="text" id="preferredHotel" placeholder="例：东京皇宫酒店" value="东京皇宫酒店 或 同等级国际五星">
+                        </div>
+                        <div class="form-field">
+                            <label>预算 (元/间夜)</label>
+                            <input type="text" id="budgetPerNight" placeholder="例：1800~2500 CNY" value="2200~2800 CNY (含早)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 接送机需求 -->
+                <div class="section">
+                    <div class="section-title">
+                        <i>✈️</i> 接送机服务
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>是否需要接送机</label>
+                            <div class="radio-group">
+                                <div class="radio-item"><input type="radio" name="needTransfer" value="需要" id="transferYes" checked> <label for="transferYes">✅ 需要</label></div>
+                                <div class="radio-item"><input type="radio" name="needTransfer" value="不需要" id="transferNo"> <label for="transferNo">❌ 不需要</label></div>
+                            </div>
+                        </div>
+                        <div class="form-field full-width" id="transferDetailArea">
+                            <label>接送机详情 (航班/人数/行李)</label>
+                            <textarea id="transferDetails" rows="3" placeholder="例：NH968 6月10日 15:30 抵达成田机场，团队22人，行李28件；MU524 6月10日 17:20 抵达，8人，行李12件；需两辆大巴。"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 会场需求 -->
+                <div class="section">
+                    <div class="section-title">
+                        <i>🎤</i> 会场需求
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>是否需要会场</label>
+                            <div class="radio-group">
+                                <div class="radio-item"><input type="radio" name="needVenue" value="需要" id="venueYes" checked> <label for="venueYes">📢 需要</label></div>
+                                <div class="radio-item"><input type="radio" name="needVenue" value="不需要" id="venueNo"> <label for="venueNo">⛔ 不需要</label></div>
+                            </div>
+                        </div>
+                        <div class="form-field full-width" id="venueDetailArea">
+                            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                                <div class="form-field"><label>会场人数</label><input type="text" id="venuePax" value="180人"></div>
+                                <div class="form-field"><label>使用时间</label><input type="text" id="venueTime" value="6月12日 09:00-17:00"></div>
+                            </div>
+                            <div class="form-field">
+                                <label>所需设备</label>
+                                <input type="text" id="venueEquipment" value="高清投影仪、无线麦克风*4、LED大屏">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 会议室需求 + 茶歇 -->
+                <div class="section">
+                    <div class="section-title">
+                        <i>💼</i> 会议室需求
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>是否需要会议室</label>
+                            <div class="radio-group">
+                                <div class="radio-item"><input type="radio" name="needMeetingRoom" value="需要" id="meetingYes" checked> <label for="meetingYes">📌 需要</label></div>
+                                <div class="radio-item"><input type="radio" name="needMeetingRoom" value="不需要" id="meetingNo"> <label for="meetingNo">🚫 不需要</label></div>
+                            </div>
+                        </div>
+                        <div class="form-field full-width" id="meetingDetailArea">
+                            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                                <div class="form-field"><label>会议室人数</label><input type="text" id="meetingPax" value="30-40人"></div>
+                                <div class="form-field"><label>使用时间段</label><input type="text" id="meetingTime" value="6月13日 14:00-17:00"></div>
+                            </div>
+                            <div class="form-field">
+                                <label>茶歇需求</label>
+                                <div class="radio-group" style="margin-bottom: 8px;">
+                                    <div class="radio-item"><input type="radio" name="coffeeBreak" value="需要茶歇" id="cbYes" checked> <label for="cbYes">🍰 需要茶歇</label></div>
+                                    <div class="radio-item"><input type="radio" name="coffeeBreak" value="不需要茶歇" id="cbNo"> <label for="cbNo">❌ 不需要茶歇</label></div>
+                                </div>
+                                <input type="text" id="coffeeRemarks" placeholder="茶歇备注（清真、无糖、现磨咖啡等）" value="提供西式+日式点心，无花生过敏原，需现磨咖啡">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 补充备注 -->
+                <div class="section">
+                    <div class="section-title">
+                        <i>📝</i> 其他需求 / 备注
+                    </div>
+                    <div class="form-field full-width">
+                        <textarea id="extraRemarks" rows="3" placeholder="发票要求、清真饮食、无障碍设施、加床政策等补充说明。"></textarea>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" id="submitBtn">📋 生成团队申请预览</button>
+                    <button type="button" id="copyResultBtn" class="btn-copy">📋 复制结果</button>
+                </div>
+            </form>
+
+            <div id="resultPreview" class="result-area">
+                <div class="result-header">
+                    <div class="result-title">📄 酒店团队申请信息汇总</div>
+                    <button type="button" id="copyPreviewBtn" class="copy-btn-small">📋 复制此内容</button>
+                </div>
+                <pre id="previewContent"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="toastMessage" class="toast-msg">✅ 已复制到剪贴板</div>
+
+<script>
+    // 动态显隐
+    const transferYes = document.getElementById('transferYes');
+    const transferNo = document.getElementById('transferNo');
+    const transferArea = document.getElementById('transferDetailArea');
+    const venueYes = document.getElementById('venueYes');
+    const venueNo = document.getElementById('venueNo');
+    const venueArea = document.getElementById('venueDetailArea');
+    const meetingYes = document.getElementById('meetingYes');
+    const meetingNo = document.getElementById('meetingNo');
+    const meetingArea = document.getElementById('meetingDetailArea');
+
+    function toggleTransfer() { transferArea.style.display = transferYes.checked ? 'block' : 'none'; }
+    function toggleVenue() { venueArea.style.display = venueYes.checked ? 'block' : 'none'; }
+    function toggleMeeting() { meetingArea.style.display = meetingYes.checked ? 'block' : 'none'; }
+    transferYes.addEventListener('change', toggleTransfer);
+    transferNo.addEventListener('change', toggleTransfer);
+    venueYes.addEventListener('change', toggleVenue);
+    venueNo.addEventListener('change', toggleVenue);
+    meetingYes.addEventListener('change', toggleMeeting);
+    meetingNo.addEventListener('change', toggleMeeting);
+    toggleTransfer(); toggleVenue(); toggleMeeting();
+
+    // 早餐卡片样式切换
+    const breakfastTags = document.querySelectorAll('.breakfast-tag');
+    function syncBreakfastUI() {
+        const selectedRadio = document.querySelector('input[name="breakfastPlan"]:checked');
+        breakfastTags.forEach(tag => {
+            const radio = tag.querySelector('input');
+            if(radio === selectedRadio) tag.classList.add('active');
+            else tag.classList.remove('active');
+        });
+    }
+    document.querySelectorAll('input[name="breakfastPlan"]').forEach(radio => {
+        radio.addEventListener('change', syncBreakfastUI);
+    });
+    syncBreakfastUI();
+
+    function showToast(msg) {
+        const toast = document.getElementById('toastMessage');
+        toast.textContent = msg || '✅ 已复制到剪贴板';
+        toast.classList.add('show-toast');
+        setTimeout(() => toast.classList.remove('show-toast'), 2000);
+    }
+
+    function getTeamType() {
+        const types = document.querySelectorAll('input[name="teamType"]');
+        for(let t of types) if(t.checked) return t.value;
+        return '会奖';
+    }
+
+    // 房型展示（符合新结构）
+    function getRoomDetails() {
+        const king = parseInt(document.getElementById('kingRoomQty').value) || 0;
+        const twin = parseInt(document.getElementById('twinRoomQty').value) || 0;
+        const otherName = document.getElementById('otherRoomTypeName').value.trim();
+        const otherQty = parseInt(document.getElementById('otherRoomQty').value) || 0;
+        const otherRemark = document.getElementById('otherRoomRemark').value.trim();
+        let lines = [];
+        if(king > 0) lines.push(`大床房：${king} 间`);
+        if(twin > 0) lines.push(`双床房：${twin} 间`);
+        if(otherQty > 0 && otherName) lines.push(`${otherName}：${otherQty} 间${otherRemark ? `（备注：${otherRemark}）` : ''}`);
+        else if(otherQty > 0 && !otherName) lines.push(`其他房型：${otherQty} 间（未注明类型）${otherRemark ? `，备注：${otherRemark}` : ''}`);
+        else if(otherName && otherQty === 0) lines.push(`${otherName}：数量为0（未实际预订）`);
+        if(lines.length === 0) return '未填写房型数量';
+        return lines.join('；');
+    }
+
+    // 早餐取值
+    function getBreakfastPlan() {
+        const selected = document.querySelector('input[name="breakfastPlan"]:checked');
+        return selected ? selected.value : '需要含早（每人一份）';
+    }
+
+    // 入住人数
+    function getOccupancy() {
+        const val = parseInt(document.getElementById('totalOccupancy').value);
+        return isNaN(val) || val <= 0 ? '待填写' : `${val} 人`;
+    }
+    function getStayPeriod() {
+        const period = document.getElementById('stayPeriod').value.trim();
+        return period || '未填写';
+    }
+
+    function getTransferFull() {
+        if(transferYes.checked) {
+            let details = document.getElementById('transferDetails').value.trim();
+            return details || '【待补充】请备注人数/航班/行李';
+        }
+        return '无需接送机';
+    }
+    function getVenueFull() {
+        if(venueYes.checked) {
+            let pax = document.getElementById('venuePax').value.trim() || '未填';
+            let time = document.getElementById('venueTime').value.trim() || '未填';
+            let equip = document.getElementById('venueEquipment').value.trim() || '未指定';
+            return `人数：${pax}；时间：${time}；设备：${equip}`;
+        }
+        return '无会场需求';
+    }
+    function getMeetingFull() {
+        if(meetingYes.checked) {
+            let pax = document.getElementById('meetingPax').value.trim() || '未填';
+            let time = document.getElementById('meetingTime').value.trim() || '未填';
+            let coffeeVal = document.querySelector('input[name="coffeeBreak"]:checked')?.value || '未定';
+            let coffeeRemark = document.getElementById('coffeeRemarks').value.trim();
+            let coffeeDetail = coffeeVal;
+            if(coffeeRemark && coffeeVal !== '不需要茶歇') coffeeDetail += ` (备注：${coffeeRemark})`;
+            else if(coffeeRemark && coffeeVal === '不需要茶歇') coffeeDetail = `不需要茶歇，但备注：${coffeeRemark}`;
+            return `人数：${pax}；时间：${time}；茶歇：${coffeeDetail}`;
+        }
+        return '无会议室需求';
+    }
+
+    function generatePreviewText() {
+        const teamName = document.getElementById('teamName').value.trim() || '【未填写】';
+        const locationVal = document.getElementById('locationTarget').value.trim() || '【未填写】';
+        const teamType = getTeamType();
+        const occupancy = getOccupancy();
+        const stayPeriod = getStayPeriod();
+        const roomDetails = getRoomDetails();
+        const breakfastPlan = getBreakfastPlan();
+        const preferredHotel = document.getElementById('preferredHotel').value.trim() || '未指定';
+        const budget = document.getElementById('budgetPerNight').value.trim() || '待定';
+        const transferNeed = transferYes.checked ? '需要' : '不需要';
+        const transferInfo = getTransferFull();
+        const venueNeed = venueYes.checked ? '需要' : '不需要';
+        const venueInfo = getVenueFull();
+        const meetingNeed = meetingYes.checked ? '需要' : '不需要';
+        const meetingInfo = getMeetingFull();
+        const extra = document.getElementById('extraRemarks').value.trim() || '无';
+
+        let output = `📋 酒店团队申请表\n`;
+        output += `────────────────────────────\n`;
+        output += `🏷️ 团队名称：${teamName}\n`;
+        output += `📌 团队类型：${teamType}\n`;
+        output += `👥 入住人数：${occupancy}\n`;
+        output += `📅 入住时间：${stayPeriod}\n`;
+        output += `🛏️ 房型需求：\n   ${roomDetails.replace(/；/g, '\n   ')}\n`;
+        output += `🍽️ 早餐方案：${breakfastPlan}\n`;
+        output += `📍 地点要求：${locationVal}\n`;
+        output += `🏨 期望酒店：${preferredHotel}\n`;
+        output += `💰 预算（元/间夜）：${budget}\n`;
+        output += `✈️ 接送机服务：${transferNeed}\n`;
+        output += `   接送机详情：${transferInfo}\n`;
+        output += `🎤 会场需求：${venueNeed}\n`;
+        output += `   会场详情：${venueInfo}\n`;
+        output += `💬 会议室需求：${meetingNeed}\n`;
+        output += `   会议室详情：${meetingInfo}\n`;
+        output += `📋 补充备注：${extra}\n`;
+        output += `\n※ 备注：房型及早餐已按最新标准统计，将有专人跟进协调。`;
+        return output;
+    }
+
+    function updatePreviewAndShow() {
+        const teamName = document.getElementById('teamName').value.trim();
+        const locationVal = document.getElementById('locationTarget').value.trim();
+        if(!teamName) { alert('请填写团队名称'); return; }
+        if(!locationVal) { alert('请填写地点'); return; }
+        const previewDiv = document.getElementById('resultPreview');
+        document.getElementById('previewContent').innerText = generatePreviewText();
+        previewDiv.classList.add('show');
+        previewDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function copyToClipboard(text, msg) {
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast(msg);
+        } catch(e) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast(msg);
+        }
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', updatePreviewAndShow);
+    document.getElementById('copyResultBtn').addEventListener('click', async () => {
+        const teamName = document.getElementById('teamName').value.trim();
+        const locationVal = document.getElementById('locationTarget').value.trim();
+        if(!teamName || !locationVal) { alert('请先填写团队名称和地点'); return; }
+        await copyToClipboard(generatePreviewText(), '📋 团队申请已复制');
+    });
+    document.getElementById('copyPreviewBtn').addEventListener('click', async () => {
+        const content = document.getElementById('previewContent').innerText;
+        if(!content || content === '') { alert('暂无预览内容，请先生成申请'); return; }
+        await copyToClipboard(content, '📋 预览内容已复制');
+    });
+</script>
+</body>
+</html>
