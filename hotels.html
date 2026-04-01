@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -127,6 +127,12 @@
             margin-top: 0.2rem;
         }
 
+        .error-hint {
+            color: #dc4c4c;
+            font-size: 0.7rem;
+            margin-top: 0.2rem;
+        }
+
         .radio-group, .checkbox-group {
             display: flex;
             flex-wrap: wrap;
@@ -214,13 +220,6 @@
             padding: 0.6rem 1rem;
             font-size: 0.85rem;
         }
-        .inline-badge {
-            font-size: 0.7rem;
-            color: #2b7a62;
-            background: #e6f4ef;
-            border-radius: 20px;
-            padding: 0.2rem 0.8rem;
-        }
 
         /* 早餐模块新样式 */
         .breakfast-module {
@@ -264,6 +263,51 @@
             cursor: pointer;
             margin: 0;
             font-size: 0.9rem;
+        }
+
+        /* 日期范围选择器样式 */
+        .date-range-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .date-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+        .date-input-group span {
+            font-size: 0.85rem;
+            color: #4a6a85;
+            font-weight: 500;
+        }
+        .date-input-group input {
+            flex: 1;
+            min-width: 140px;
+            padding: 0.6rem 0.8rem;
+        }
+        .date-separator {
+            color: #8ba0b3;
+            font-weight: 500;
+        }
+        .date-error {
+            border-color: #dc4c4c !important;
+            background-color: #fff5f5 !important;
+        }
+        @media (max-width: 600px) {
+            .date-range-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .date-input-group {
+                width: 100%;
+            }
         }
 
         .btn-group {
@@ -387,18 +431,6 @@
         .toast-msg.show-toast {
             opacity: 1;
         }
-        hr {
-            margin: 1rem 0;
-            border: 0;
-            height: 1px;
-            background: #e2e8f0;
-        }
-        .flex-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 1rem;
-        }
     </style>
 </head>
 <body>
@@ -418,7 +450,7 @@
                     <div class="form-grid">
                         <div class="form-field">
                             <label class="required">团队名称</label>
-                            <input type="text" id="teamName" placeholder="例：Asia MICE Elite / 东京会奖团" value="东京会奖团">
+                            <input type="text" id="teamName" placeholder="例：Asia MICE Elite / 东京会奖团" value="">
                         </div>
                         <div class="form-field">
                             <label class="required">团队类型</label>
@@ -433,53 +465,61 @@
                     </div>
                 </div>
 
-                <!-- 房型数量 & 早餐 完全按照新结构重构 -->
+                <!-- 房型数量 & 早餐 -->
                 <div class="section">
                     <div class="section-title">
                         <i>🛏️</i> 房型数量 & 早餐
                     </div>
                     <div class="form-field full-width">
-                        <!-- 入住人数 + 入住时间 (两列布局) -->
                         <div class="form-grid" style="margin-bottom: 1.2rem;">
                             <div class="form-field">
                                 <label class="required">👥 入住人数</label>
-                                <input type="number" id="totalOccupancy" min="1" value="28" step="1" placeholder="总人数">
+                                <input type="number" id="totalOccupancy" min="1" value="" step="1" placeholder="总人数">
                                 <div class="hint">团队总人数（含领队/导游）</div>
                             </div>
                             <div class="form-field">
                                 <label class="required">📅 入住时间</label>
-                                <input type="text" id="stayPeriod" placeholder="例：2025年6月10日 - 2025年6月13日" value="2025年6月10日 - 2025年6月13日">
-                                <div class="hint">格式：开始日期 - 结束日期</div>
+                                <div class="date-range-wrapper">
+                                    <div class="date-input-group">
+                                        <span>入住</span>
+                                        <input type="date" id="checkInDate" value="">
+                                    </div>
+                                    <span class="date-separator">至</span>
+                                    <div class="date-input-group">
+                                        <span>离店</span>
+                                        <input type="date" id="checkOutDate" value="">
+                                    </div>
+                                </div>
+                                <div id="dateErrorMsg" class="error-hint" style="display: none;">❌ 离店日期不能早于入住日期</div>
+                                <div class="hint">选择入住和离店日期，离店日期必须晚于入住日期</div>
                             </div>
                         </div>
 
-                        <!-- 房型区块：大床房，双床房，其他（自由文本+数量+备注） -->
                         <label>🏨 房型需求</label>
                         <div class="room-stats-grid">
                             <div class="room-row">
                                 <div class="room-item">
                                     <span>🛌 大床房</span>
-                                    <input type="number" id="kingRoomQty" min="0" value="8" step="1"> <span>间</span>
+                                    <input type="number" id="kingRoomQty" min="0" value="0" step="1"> <span>间</span>
                                 </div>
                                 <div class="room-item">
                                     <span>🛏️ 双床房</span>
-                                    <input type="number" id="twinRoomQty" min="0" value="12" step="1"> <span>间</span>
+                                    <input type="number" id="twinRoomQty" min="0" value="0" step="1"> <span>间</span>
                                 </div>
                             </div>
                             <div class="room-row">
                                 <div class="other-room-flex">
                                     <span>🏷️ 其他房型</span>
-                                    <input type="text" id="otherRoomTypeName" placeholder="房型名称（如家庭房/连通房）" value="连通房" style="flex:1; min-width:120px;">
-                                    <input type="number" id="otherRoomQty" min="0" value="2" step="1" placeholder="间数" style="width:85px;"> <span>间</span>
+                                    <input type="text" id="otherRoomTypeName" placeholder="" value="">
+                                    <input type="number" id="otherRoomQty" min="0" value="0" step="1" placeholder="" style="width:85px;"> <span>间</span>
                                 </div>
                             </div>
                             <div class="room-remark-input">
-                                <input type="text" id="otherRoomRemark" placeholder="其他房型备注（楼层、特殊要求等）" value="需连通房，方便团队领队协调">
+                                <input type="text" id="otherRoomRemark" placeholder="" value="">
                                 <div class="hint">如有家庭房、无障碍房或其他特殊房型，请在此注明具体需求</div>
                             </div>
                         </div>
 
-                        <!-- 早餐模块：需要含早（每人一份） / 无需含早（自费） 采用卡片式切换 -->
                         <label>🍽️ 早餐方案</label>
                         <div class="breakfast-module">
                             <div class="breakfast-options" id="breakfastToggleGroup">
@@ -505,15 +545,15 @@
                     <div class="form-grid">
                         <div class="form-field full-width">
                             <label class="required">地点 (城市+区域/地标)</label>
-                            <input type="text" id="locationTarget" placeholder="例：东京都千代田区/皇居周边" value="东京都千代田区/皇居周边，靠近东京站" required>
+                            <input type="text" id="locationTarget" placeholder="例：东京都千代田区/皇居周边" value="" required>
                         </div>
                         <div class="form-field">
-                            <label>期望酒店 (名称/品牌)</label>
-                            <input type="text" id="preferredHotel" placeholder="例：东京皇宫酒店" value="东京皇宫酒店 或 同等级国际五星">
+                            <label>期望酒店 (名称+星级)</label>
+                            <input type="text" id="preferredHotel" placeholder="例：东京皇宫酒店 五星级" value="">
                         </div>
                         <div class="form-field">
                             <label>预算 (元/间夜)</label>
-                            <input type="text" id="budgetPerNight" placeholder="例：1800~2500 CNY" value="2200~2800 CNY (含早)">
+                            <input type="text" id="budgetPerNight" placeholder="例：1800~2500 CNY" value="">
                         </div>
                     </div>
                 </div>
@@ -553,12 +593,17 @@
                         </div>
                         <div class="form-field full-width" id="venueDetailArea">
                             <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                                <div class="form-field"><label>会场人数</label><input type="text" id="venuePax" value="180人"></div>
-                                <div class="form-field"><label>使用时间</label><input type="text" id="venueTime" value="6月12日 09:00-17:00"></div>
+                                <div class="form-field"><label>预计使用人数</label><input type="text" id="venuePax" value="" placeholder="例：180人"></div>
+                                <div class="form-field"><label>使用时间</label><input type="text" id="venueTime" value="" placeholder="例：6月12日 09:00-17:00"></div>
                             </div>
                             <div class="form-field">
                                 <label>所需设备</label>
-                                <input type="text" id="venueEquipment" value="高清投影仪、无线麦克风*4、LED大屏">
+                                <input type="text" id="venueEquipment" value="" placeholder="例：投影仪、音响、麦克风">
+                            </div>
+                            <div class="form-field">
+                                <label style="text-transform: none;">📝 其他会场要求</label>
+                                <input type="text" id="venueOtherReq" placeholder="如有其他要求可写明 尽量满足" value="">
+                                <div class="hint">如舞台布置、桌椅摆放形式、签到区需求等</div>
                             </div>
                         </div>
                     </div>
@@ -579,8 +624,8 @@
                         </div>
                         <div class="form-field full-width" id="meetingDetailArea">
                             <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                                <div class="form-field"><label>会议室人数</label><input type="text" id="meetingPax" value="30-40人"></div>
-                                <div class="form-field"><label>使用时间段</label><input type="text" id="meetingTime" value="6月13日 14:00-17:00"></div>
+                                <div class="form-field"><label>预计使用人数</label><input type="text" id="meetingPax" value="" placeholder="例：30-40人"></div>
+                                <div class="form-field"><label>使用时间段</label><input type="text" id="meetingTime" value="" placeholder="例：6月13日 14:00-17:00"></div>
                             </div>
                             <div class="form-field">
                                 <label>茶歇需求</label>
@@ -588,19 +633,24 @@
                                     <div class="radio-item"><input type="radio" name="coffeeBreak" value="需要茶歇" id="cbYes" checked> <label for="cbYes">🍰 需要茶歇</label></div>
                                     <div class="radio-item"><input type="radio" name="coffeeBreak" value="不需要茶歇" id="cbNo"> <label for="cbNo">❌ 不需要茶歇</label></div>
                                 </div>
-                                <input type="text" id="coffeeRemarks" placeholder="茶歇备注（清真、无糖、现磨咖啡等）" value="提供西式+日式点心，无花生过敏原，需现磨咖啡">
+                                <input type="text" id="coffeeRemarks" placeholder="茶歇备注（清真、无糖、现磨咖啡等）" value="">
+                            </div>
+                            <div class="form-field">
+                                <label style="text-transform: none;">📝 其他会议室要求</label>
+                                <input type="text" id="meetingOtherReq" placeholder="如有其他要求可写明 尽量满足" value="">
+                                <div class="hint">如投影设备、白板、圆桌/课桌式布局、网络需求等</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 补充备注 -->
+                <!-- 补充备注（已删除发票要求提示） -->
                 <div class="section">
                     <div class="section-title">
                         <i>📝</i> 其他需求 / 备注
                     </div>
                     <div class="form-field full-width">
-                        <textarea id="extraRemarks" rows="3" placeholder="发票要求、清真饮食、无障碍设施、加床政策等补充说明。"></textarea>
+                        <textarea id="extraRemarks" rows="3" placeholder="清真饮食、无障碍设施、加床政策等补充说明。"></textarea>
                     </div>
                 </div>
 
@@ -660,6 +710,41 @@
     });
     syncBreakfastUI();
 
+    // 日期校验函数
+    const checkInDate = document.getElementById('checkInDate');
+    const checkOutDate = document.getElementById('checkOutDate');
+    const dateErrorMsg = document.getElementById('dateErrorMsg');
+
+    function validateDates() {
+        const checkIn = checkInDate.value;
+        const checkOut = checkOutDate.value;
+        
+        if (checkIn && checkOut) {
+            const inDate = new Date(checkIn);
+            const outDate = new Date(checkOut);
+            
+            if (outDate <= inDate) {
+                dateErrorMsg.style.display = 'block';
+                checkOutDate.classList.add('date-error');
+                checkInDate.classList.add('date-error');
+                return false;
+            } else {
+                dateErrorMsg.style.display = 'none';
+                checkOutDate.classList.remove('date-error');
+                checkInDate.classList.remove('date-error');
+                return true;
+            }
+        }
+        // 如果只有一个日期填写，清除错误样式但不阻止提交
+        dateErrorMsg.style.display = 'none';
+        checkOutDate.classList.remove('date-error');
+        checkInDate.classList.remove('date-error');
+        return true;
+    }
+
+    checkInDate.addEventListener('change', validateDates);
+    checkOutDate.addEventListener('change', validateDates);
+
     function showToast(msg) {
         const toast = document.getElementById('toastMessage');
         toast.textContent = msg || '✅ 已复制到剪贴板';
@@ -673,7 +758,20 @@
         return '会奖';
     }
 
-    // 房型展示（符合新结构）
+    // 获取入住时间字符串（格式化日期显示）
+    function getStayPeriod() {
+        const checkIn = checkInDate.value;
+        const checkOut = checkOutDate.value;
+        if(checkIn && checkOut) {
+            return `${checkIn} 至 ${checkOut}`;
+        } else if(checkIn && !checkOut) {
+            return `${checkIn} 起（离店日期未填）`;
+        } else if(!checkIn && checkOut) {
+            return `（入住日期未填）至 ${checkOut}`;
+        }
+        return '未填写';
+    }
+
     function getRoomDetails() {
         const king = parseInt(document.getElementById('kingRoomQty').value) || 0;
         const twin = parseInt(document.getElementById('twinRoomQty').value) || 0;
@@ -683,27 +781,27 @@
         let lines = [];
         if(king > 0) lines.push(`大床房：${king} 间`);
         if(twin > 0) lines.push(`双床房：${twin} 间`);
-        if(otherQty > 0 && otherName) lines.push(`${otherName}：${otherQty} 间${otherRemark ? `（备注：${otherRemark}）` : ''}`);
-        else if(otherQty > 0 && !otherName) lines.push(`其他房型：${otherQty} 间（未注明类型）${otherRemark ? `，备注：${otherRemark}` : ''}`);
-        else if(otherName && otherQty === 0) lines.push(`${otherName}：数量为0（未实际预订）`);
+        if(otherQty > 0 && otherName) {
+            lines.push(`${otherName}：${otherQty} 间${otherRemark ? `（备注：${otherRemark}）` : ''}`);
+        } else if(otherQty > 0 && !otherName) {
+            lines.push(`其他房型：${otherQty} 间（未注明类型）${otherRemark ? `，备注：${otherRemark}` : ''}`);
+        } else if(otherName && otherQty === 0 && otherName !== '') {
+            lines.push(`${otherName}：数量为0（未实际预订）${otherRemark ? `，备注：${otherRemark}` : ''}`);
+        } else if(otherRemark && otherQty === 0 && !otherName) {
+            lines.push(`其他房型备注：${otherRemark}`);
+        }
         if(lines.length === 0) return '未填写房型数量';
         return lines.join('；');
     }
 
-    // 早餐取值
     function getBreakfastPlan() {
         const selected = document.querySelector('input[name="breakfastPlan"]:checked');
         return selected ? selected.value : '需要含早（每人一份）';
     }
 
-    // 入住人数
     function getOccupancy() {
         const val = parseInt(document.getElementById('totalOccupancy').value);
         return isNaN(val) || val <= 0 ? '待填写' : `${val} 人`;
-    }
-    function getStayPeriod() {
-        const period = document.getElementById('stayPeriod').value.trim();
-        return period || '未填写';
     }
 
     function getTransferFull() {
@@ -713,25 +811,33 @@
         }
         return '无需接送机';
     }
+
     function getVenueFull() {
         if(venueYes.checked) {
             let pax = document.getElementById('venuePax').value.trim() || '未填';
             let time = document.getElementById('venueTime').value.trim() || '未填';
             let equip = document.getElementById('venueEquipment').value.trim() || '未指定';
-            return `人数：${pax}；时间：${time}；设备：${equip}`;
+            let otherReq = document.getElementById('venueOtherReq').value.trim();
+            let result = `预计人数：${pax}；时间：${time}；设备：${equip}`;
+            if(otherReq) result += `；其他要求：${otherReq}`;
+            return result;
         }
         return '无会场需求';
     }
+
     function getMeetingFull() {
         if(meetingYes.checked) {
             let pax = document.getElementById('meetingPax').value.trim() || '未填';
             let time = document.getElementById('meetingTime').value.trim() || '未填';
             let coffeeVal = document.querySelector('input[name="coffeeBreak"]:checked')?.value || '未定';
             let coffeeRemark = document.getElementById('coffeeRemarks').value.trim();
+            let otherReq = document.getElementById('meetingOtherReq').value.trim();
             let coffeeDetail = coffeeVal;
             if(coffeeRemark && coffeeVal !== '不需要茶歇') coffeeDetail += ` (备注：${coffeeRemark})`;
             else if(coffeeRemark && coffeeVal === '不需要茶歇') coffeeDetail = `不需要茶歇，但备注：${coffeeRemark}`;
-            return `人数：${pax}；时间：${time}；茶歇：${coffeeDetail}`;
+            let result = `预计人数：${pax}；时间：${time}；茶歇：${coffeeDetail}`;
+            if(otherReq) result += `；其他要求：${otherReq}`;
+            return result;
         }
         return '无会议室需求';
     }
@@ -772,7 +878,7 @@
         output += `💬 会议室需求：${meetingNeed}\n`;
         output += `   会议室详情：${meetingInfo}\n`;
         output += `📋 补充备注：${extra}\n`;
-        output += `\n※ 备注：房型及早餐已按最新标准统计，将有专人跟进协调。`;
+        output += `\n※ 备注：房型及早餐已按最新标准统计，会场/会议室需求已记录附加说明，将有专人跟进协调。`;
         return output;
     }
 
@@ -781,6 +887,13 @@
         const locationVal = document.getElementById('locationTarget').value.trim();
         if(!teamName) { alert('请填写团队名称'); return; }
         if(!locationVal) { alert('请填写地点'); return; }
+        
+        // 日期校验
+        if (!validateDates()) {
+            alert('离店日期不能早于入住日期，请修改后重新提交');
+            return;
+        }
+        
         const previewDiv = document.getElementById('resultPreview');
         document.getElementById('previewContent').innerText = generatePreviewText();
         previewDiv.classList.add('show');
@@ -807,6 +920,10 @@
         const teamName = document.getElementById('teamName').value.trim();
         const locationVal = document.getElementById('locationTarget').value.trim();
         if(!teamName || !locationVal) { alert('请先填写团队名称和地点'); return; }
+        if (!validateDates()) {
+            alert('离店日期不能早于入住日期，请修改后再复制');
+            return;
+        }
         await copyToClipboard(generatePreviewText(), '📋 团队申请已复制');
     });
     document.getElementById('copyPreviewBtn').addEventListener('click', async () => {
